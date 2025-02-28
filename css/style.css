@@ -1,0 +1,13 @@
+#map {
+  height: 300px;
+}
+
+#historyList {
+  list-style-type: none;
+  padding-left: 0;
+}
+
+#historyList li {
+  padding: 5px 0;
+  border-bottom: 1px solid #ddd;
+}
