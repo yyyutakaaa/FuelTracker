@@ -1,13 +1,156 @@
+html,
+body {
+  margin: 0;
+  padding: 0;
+  font-family: "Inter", sans-serif;
+  background: linear-gradient(135deg, #1f1f1f 0%, #2b2b2b 100%);
+  color: #f0f0f0;
+  overflow-x: hidden;
+}
+
+.container {
+  padding: 1rem;
+  max-width: 100%;
+}
+
+.navbar,
+.box {
+  background-color: rgba(30, 30, 30, 0.4);
+  backdrop-filter: blur(10px);
+  border-radius: 10px;
+  border: 1px solid rgba(255, 255, 255, 0.05);
+  box-shadow: 0 4px 10px rgba(0, 0, 0, 0.4);
+  margin-bottom: 1rem;
+  padding: 1rem;
+}
+
+.input,
+.select select,
+.textarea {
+  background-color: rgba(40, 40, 40, 0.6);
+  color: #ffffff;
+  border: 1px solid rgba(255, 255, 255, 0.1);
+  border-radius: 5px;
+  padding: 0.5rem;
+}
+
+.input:focus,
+.select select:focus,
+.textarea:focus {
+  border-color: #646cff;
+  outline: none;
+}
+
+.button.is-primary {
+  background: linear-gradient(135deg, #646cff 0%, #535bf2 100%);
+  border: none;
+  color: #fff;
+  transition: background 0.3s ease, transform 0.2s ease;
+  width: 100%;
+  margin-top: 0.5rem;
+}
+.button.is-primary:hover {
+  background: linear-gradient(135deg, #535bf2 0%, #646cff 100%);
+  transform: scale(1.02);
+}
+
+.navbar-item,
+.navbar-link {
+  color: #d0d0d0 !important;
+  transition: color 0.2s;
+}
+.navbar-item:hover,
+.navbar-link:hover {
+  color: #ffffff !important;
+}
+
+.footer {
+  background: rgba(30, 30, 30, 0.4);
+  backdrop-filter: blur(10px);
+  color: #d0d0d0;
+  border-top: 1px solid rgba(255, 255, 255, 0.05);
+  text-align: center;
+  padding: 1rem;
+}
+
 #map {
   height: 300px;
+  border-radius: 10px;
+  border: 1px solid rgba(255, 255, 255, 0.1);
+  box-shadow: 0 2px 6px rgba(0, 0, 0, 0.4);
 }
 
-#historyList {
-  list-style-type: none;
-  padding-left: 0;
+.subtitle {
+  color: #ffffff;
+  margin-bottom: 0.5rem;
 }
 
-#historyList li {
-  padding: 5px 0;
-  border-bottom: 1px solid #ddd;
+.box a {
+  color: #9faeff;
+  transition: color 0.2s;
+}
+.box a:hover {
+  color: #b2c2ff;
+}
+
+.animate__animated {
+  --animate-duration: 0.6s;
+}
+
+.box ul {
+  list-style-type: disc;
+  margin-left: 1.5rem;
+}
+
+#loadingScreen {
+  position: fixed;
+  top: 0;
+  left: 0;
+  width: 100%;
+  height: 100%;
+  background: rgba(18, 18, 18, 0.95);
+  z-index: 2000;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  backdrop-filter: blur(5px);
+  flex-direction: column;
+}
+.loading-content {
+  text-align: center;
+}
+.spinner {
+  border: 8px solid #444;
+  border-top: 8px solid #e0e0e0;
+  border-radius: 50%;
+  width: 60px;
+  height: 60px;
+  animation: spin 1s linear infinite;
+  margin-bottom: 10px;
+}
+@keyframes spin {
+  to {
+    transform: rotate(360deg);
+  }
+}
+
+@media screen and (min-width: 768px) {
+  .container {
+    max-width: 720px;
+    margin: 0 auto;
+    padding: 1.5rem;
+  }
+  .navbar,
+  .box {
+    padding: 1.5rem;
+  }
+  .button.is-primary {
+    width: auto;
+  }
+}
+
+@media screen and (min-width: 1024px) {
+  .container {
+    max-width: 960px;
+  }
 }

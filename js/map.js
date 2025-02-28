@@ -1,11 +1,5 @@
-// js/map.js
-let map; // Globale kaartvariabele
-let routeLayer; // Laag voor de route
-
-/**
- * Initialiseert de Leaflet-kaart als deze nog niet bestaat.
- * Wordt aangeroepen wanneer de gebruiker een berekening uitvoert.
- */
+let map;
+let routeLayer;
 export function initMap() {
   if (!map) {
     map = L.map("map").setView([51.505, -0.09], 13);
@@ -14,19 +8,9 @@ export function initMap() {
     }).addTo(map);
   }
 }
-
-/**
- * Tekent de route op de kaart met de meegegeven GeoJSON-gegevens.
- */
 export function drawRoute(geojson) {
-  if (!map) {
-    initMap();
-  }
-  // Verwijder bestaande route
-  if (routeLayer) {
-    map.removeLayer(routeLayer);
-  }
-  // Voeg nieuwe route toe en pas de zoom aan
+  if (!map) initMap();
+  if (routeLayer) map.removeLayer(routeLayer);
   routeLayer = L.geoJSON(geojson).addTo(map);
   map.fitBounds(routeLayer.getBounds());
 }

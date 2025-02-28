@@ -1,120 +1,132 @@
-// js/app.js
-import { geocodeAddress, getRoute, getFuelPrice } from "./api.js";
+import { showCookieBanner } from "./cookieBanner.js";
+import { getFuelPrice } from "./api.js";
 import { saveHistory, loadHistory } from "./storage.js";
 import { initMap, drawRoute } from "./map.js";
 import { drawChart } from "./chart.js";
 
-// Haal DOM-elementen op
-const departureInput = document.getElementById("departure");
-const destinationInput = document.getElementById("destination");
-const consumptionInput = document.getElementById("consumption");
-const fuelSelect = document.getElementById("fuelSelect");
-const calculateBtn = document.getElementById("calculateBtn");
-const resultBox = document.getElementById("resultBox");
-const distanceEl = document.getElementById("distance");
-const durationEl = document.getElementById("duration");
-const costEl = document.getElementById("cost");
-const fuelPriceEl = document.getElementById("fuelPrice");
-const mapBox = document.getElementById("mapBox");
-const historyBox = document.getElementById("historyBox");
-const historyList = document.getElementById("historyList");
-const chartBox = document.getElementById("chartBox");
-
-// Globale ritgeschiedenis
-let history = loadHistory();
-updateHistoryUI();
-
-// Voeg event listener toe aan de knop
-calculateBtn.addEventListener("click", async () => {
-  const departure = departureInput.value.trim();
-  const destination = destinationInput.value.trim();
-  const consumption = parseFloat(consumptionInput.value);
-  const fuelType = fuelSelect.value; // Lees de gekozen brandstof
-
-  if (!departure || !destination || isNaN(consumption)) {
-    alert("Vul alle velden correct in!");
-    return;
-  }
-
-  try {
-    // 1. Geocode de adressen
-    const geoDeparture = await geocodeAddress(departure);
-    const geoDestination = await geocodeAddress(destination);
-    if (!geoDeparture || !geoDestination) {
-      alert("Een of beide adressen zijn niet gevonden.");
-      return;
-    }
-
-    // 2. Haal de route op via OSRM
-    const routeData = await getRoute(geoDeparture, geoDestination);
-    if (!routeData) {
-      alert("Route kon niet worden berekend.");
-      return;
-    }
-
-    const route = routeData.routes[0];
-    const distanceKm = route.distance / 1000;
-    const durationMin = route.duration / 60;
-
-    // 3. Brandstofprijs ophalen met de gekozen brandstof
-    const fuelPrice = await getFuelPrice(fuelType);
-
-    // 4. Bereken de kosten
-    // Formule: (afstand (km) * verbruik (L/100km) / 100) * brandstofprijs
-    const cost = ((distanceKm * consumption) / 100) * fuelPrice;
-
-    // Update de resultaatweergave
-    distanceEl.textContent = distanceKm.toFixed(2);
-    durationEl.textContent = durationMin.toFixed(0); // Reistijd zonder decimalen
-    costEl.textContent = cost.toFixed(2);
-    fuelPriceEl.textContent = fuelPrice ? fuelPrice.toFixed(3) : "1.700";
-    resultBox.style.display = "block";
-
-    // 5. Update de kaartweergave
-    mapBox.style.display = "block";
-    initMap();
-    drawRoute(route.geometry);
-
-    // 6. Werk de ritgeschiedenis bij
-    const ride = {
-      departure,
-      destination,
-      distance: distanceKm.toFixed(2),
-      cost: cost.toFixed(2),
-      fuelType,
-      fuelPrice: fuelPrice ? fuelPrice.toFixed(3) : "1.700",
+const app = Vue.createApp({
+  data() {
+    return {
+      departure: "",
+      destination: "",
+      consumption: null,
+      fuelType: "Euro Super 95 E10 (€/L)",
+      result: null,
+      routeGeoJson: null,
+      history: [],
     };
-    history.push(ride);
-    saveHistory(history);
-    updateHistoryUI();
-
-    // 7. Update de grafiek
-    chartBox.style.display = "block";
-    drawChart(history);
-  } catch (error) {
-    console.error(error);
-    alert("Er is iets misgegaan tijdens de berekening.");
-  }
+  },
+  mounted() {
+    this.history = loadHistory();
+    showCookieBanner();
+    if (this.history.length) {
+      this.showLastTripBanner();
+    }
+    initMap();
+    const burger = document.querySelector(".navbar-burger");
+    const menu = document.getElementById("navMenu");
+    burger.addEventListener("click", () => {
+      burger.classList.toggle("is-active");
+      menu.classList.toggle("is-active");
+    });
+  },
+  methods: {
+    async calculateTrip() {
+      if (!this.departure || !this.destination || !this.consumption) {
+        alert("Vul alle velden correct in!");
+        return;
+      }
+      try {
+        const geoDeparture = await this.geocodeAddress(this.departure);
+        const geoDestination = await this.geocodeAddress(this.destination);
+        if (!geoDeparture || !geoDestination) {
+          alert("Een of beide adressen niet gevonden.");
+          return;
+        }
+        const routeData = await this.getRoute(geoDeparture, geoDestination);
+        if (!routeData) {
+          alert("Route kon niet worden berekend.");
+          return;
+        }
+        const route = routeData.routes[0];
+        const distanceKm = route.distance / 1000;
+        const durationMin = route.duration / 60;
+        const fuelPrice = await getFuelPrice(this.fuelType);
+        const cost = ((distanceKm * this.consumption) / 100) * fuelPrice;
+        this.result = {
+          distance: distanceKm.toFixed(2),
+          duration: durationMin.toFixed(0),
+          cost: cost.toFixed(2),
+          fuelPrice: fuelPrice.toFixed(3),
+        };
+        drawRoute(route.geometry);
+        const ride = {
+          departure: this.departure,
+          destination: this.destination,
+          distance: distanceKm.toFixed(2),
+          cost: cost.toFixed(2),
+          fuelType: this.fuelType,
+          fuelPrice: fuelPrice.toFixed(3),
+        };
+        this.history.push(ride);
+        saveHistory(this.history);
+        drawChart(this.history);
+      } catch (error) {
+        console.error(error);
+        alert("Er is iets misgegaan tijdens de berekening.");
+      }
+    },
+    async geocodeAddress(address) {
+      const url =
+        "https://nominatim.openstreetmap.org/search?format=json&q=" +
+        encodeURIComponent(address);
+      const response = await fetch(url);
+      const data = await response.json();
+      if (data && data.length > 0) {
+        return { lat: data[0].lat, lon: data[0].lon };
+      }
+      return null;
+    },
+    async getRoute(start, end) {
+      const url =
+        "https://router.project-osrm.org/route/v1/car/" +
+        start.lon +
+        "," +
+        start.lat +
+        ";" +
+        end.lon +
+        "," +
+        end.lat +
+        "?overview=full&geometries=geojson";
+      const response = await fetch(url);
+      const data = await response.json();
+      if (data && data.code === "Ok") {
+        return data;
+      }
+      return null;
+    },
+    showLastTripBanner() {
+      const lastRide = this.history[this.history.length - 1];
+      Swal.fire({
+        title: "Laatste berekening weergeven?",
+        text:
+          "Je laatste rit: " +
+          lastRide.departure +
+          " naar " +
+          lastRide.destination +
+          " voor €" +
+          lastRide.cost,
+        icon: "question",
+        showCancelButton: true,
+        confirmButtonText: "Weergeven",
+        cancelButtonText: "Nieuwe berekening",
+      }).then((result) => {
+        if (result.isConfirmed) {
+          const historySection = document.getElementById("historySection");
+          historySection.scrollIntoView({ behavior: "smooth" });
+        }
+      });
+    },
+  },
 });
-
-/**
- * Update de UI van de ritgeschiedenis.
- */
-function updateHistoryUI() {
-  // Toon of verberg de geschiedenis en grafiek afhankelijk van data
-  if (history.length > 0) {
-    historyBox.style.display = "block";
-    chartBox.style.display = "block";
-  } else {
-    historyBox.style.display = "none";
-    chartBox.style.display = "none";
-  }
-
-  // Maak de lijst leeg en vul opnieuw
-  historyList.innerHTML = "";
-  history.forEach((ride) => {
-    const li = document.createElement("li");
-    li.textContent = `${ride.departure} naar ${ride.destination}: ${ride.distance} km, €${ride.cost} (Brandstof: ${ride.fuelType} à €${ride.fuelPrice}/L)`;
-    historyList.appendChild(li);
-  });
-}
+app.mount("#app");
