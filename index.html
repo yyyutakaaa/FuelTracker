@@ -7,7 +7,7 @@
     <link rel="stylesheet" href="css/style.css" />
     <!-- Leaflet CSS -->
     <link rel="stylesheet" href="https://unpkg.com/leaflet/dist/leaflet.css" />
-    <!-- Bulma CSS voor nette styling (optioneel, maar ik vind het prettig voor een snelle opzet) -->
+    <!-- Bulma CSS voor nette styling -->
     <link
       rel="stylesheet"
       href="https://cdnjs.cloudflare.com/ajax/libs/bulma/0.9.3/css/bulma.min.css"
@@ -52,6 +52,32 @@
             />
           </div>
         </div>
+        <!-- Dropdown voor brandstofkeuze -->
+        <div class="field">
+          <label class="label">Kies brandstof</label>
+          <div class="control">
+            <div class="select">
+              <select id="fuelSelect">
+                <option value="Euro Super 95 E10 (€/L)">
+                  Euro Super 95 E10 (€/L)
+                </option>
+                <option value="Road Diesel B7 (€/L)">
+                  Road Diesel B7 (€/L)
+                </option>
+                <option value="Super Plus 98 E5 (€/L)">
+                  Super Plus 98 E5 (€/L)
+                </option>
+                <option value="Super Plus 98 E10 (€/L)">
+                  Super Plus 98 E10 (€/L)
+                </option>
+                <option value="Road Diesel B10 (€/L)">
+                  Road Diesel B10 (€/L)
+                </option>
+                <!-- Voeg eventueel meer opties toe -->
+              </select>
+            </div>
+          </div>
+        </div>
         <div class="field">
           <button class="button is-primary" id="calculateBtn">
             Bereken Ritprijs
@@ -64,6 +90,11 @@
         <p><strong>Afstand:</strong> <span id="distance"></span> km</p>
         <p><strong>Reistijd:</strong> <span id="duration"></span> minuten</p>
         <p><strong>Kosten:</strong> €<span id="cost"></span></p>
+        <p>
+          <strong>Brandstofprijs per liter:</strong> €<span
+            id="fuelPrice"
+          ></span>
+        </p>
       </div>
 
       <!-- Kaartweergave -->
@@ -86,7 +117,7 @@
     <!-- Externe libraries -->
     <script src="https://unpkg.com/leaflet/dist/leaflet.js"></script>
     <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
-    <!-- Eigen hoofdscript: start met type="module" zodat we ES6 modules kunnen gebruiken -->
+    <!-- Eigen hoofdscript -->
     <script type="module" src="js/app.js"></script>
   </body>
 </html>

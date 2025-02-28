@@ -8,11 +8,13 @@ import { drawChart } from "./chart.js";
 const departureInput = document.getElementById("departure");
 const destinationInput = document.getElementById("destination");
 const consumptionInput = document.getElementById("consumption");
+const fuelSelect = document.getElementById("fuelSelect");
 const calculateBtn = document.getElementById("calculateBtn");
 const resultBox = document.getElementById("resultBox");
 const distanceEl = document.getElementById("distance");
 const durationEl = document.getElementById("duration");
 const costEl = document.getElementById("cost");
+const fuelPriceEl = document.getElementById("fuelPrice");
 const mapBox = document.getElementById("mapBox");
 const historyBox = document.getElementById("historyBox");
 const historyList = document.getElementById("historyList");
@@ -27,6 +29,7 @@ calculateBtn.addEventListener("click", async () => {
   const departure = departureInput.value.trim();
   const destination = destinationInput.value.trim();
   const consumption = parseFloat(consumptionInput.value);
+  const fuelType = fuelSelect.value; // Lees de gekozen brandstof
 
   if (!departure || !destination || isNaN(consumption)) {
     alert("Vul alle velden correct in!");
@@ -53,8 +56,8 @@ calculateBtn.addEventListener("click", async () => {
     const distanceKm = route.distance / 1000;
     const durationMin = route.duration / 60;
 
-    // 3. Brandstofprijs ophalen
-    const fuelPrice = await getFuelPrice();
+    // 3. Brandstofprijs ophalen met de gekozen brandstof
+    const fuelPrice = await getFuelPrice(fuelType);
 
     // 4. Bereken de kosten
     // Formule: (afstand (km) * verbruik (L/100km) / 100) * brandstofprijs
@@ -62,8 +65,9 @@ calculateBtn.addEventListener("click", async () => {
 
     // Update de resultaatweergave
     distanceEl.textContent = distanceKm.toFixed(2);
-    durationEl.textContent = durationMin.toFixed(2);
+    durationEl.textContent = durationMin.toFixed(0); // Reistijd zonder decimalen
     costEl.textContent = cost.toFixed(2);
+    fuelPriceEl.textContent = fuelPrice ? fuelPrice.toFixed(3) : "1.700";
     resultBox.style.display = "block";
 
     // 5. Update de kaartweergave
@@ -77,6 +81,8 @@ calculateBtn.addEventListener("click", async () => {
       destination,
       distance: distanceKm.toFixed(2),
       cost: cost.toFixed(2),
+      fuelType,
+      fuelPrice: fuelPrice ? fuelPrice.toFixed(3) : "1.700",
     };
     history.push(ride);
     saveHistory(history);
@@ -108,7 +114,7 @@ function updateHistoryUI() {
   historyList.innerHTML = "";
   history.forEach((ride) => {
     const li = document.createElement("li");
-    li.textContent = `${ride.departure} naar ${ride.destination}: ${ride.distance} km, €${ride.cost}`;
+    li.textContent = `${ride.departure} naar ${ride.destination}: ${ride.distance} km, €${ride.cost} (Brandstof: ${ride.fuelType} à €${ride.fuelPrice}/L)`;
     historyList.appendChild(li);
   });
 }
