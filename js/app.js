@@ -51,13 +51,17 @@ const app = Vue.createApp({
         const route = routeData.routes[0];
         const distanceKm = route.distance / 1000;
         const durationMin = route.duration / 60;
+        // Haal de brandstofprijs op via de API
         const fuelPrice = await getFuelPrice(this.fuelType);
-        const cost = ((distanceKm * this.consumption) / 100) * fuelPrice;
+        // Pas een korting toe: vermenigvuldig met 0.88, zodat bij 1,7 ongeveer 1,5 uitkomt
+        const adjustedFuelPrice = fuelPrice * 0.88;
+        const cost =
+          ((distanceKm * this.consumption) / 100) * adjustedFuelPrice;
         this.result = {
           distance: distanceKm.toFixed(2),
           duration: durationMin.toFixed(0),
           cost: cost.toFixed(2),
-          fuelPrice: fuelPrice.toFixed(3),
+          fuelPrice: adjustedFuelPrice.toFixed(3),
         };
         drawRoute(route.geometry);
         const ride = {
@@ -66,7 +70,7 @@ const app = Vue.createApp({
           distance: distanceKm.toFixed(2),
           cost: cost.toFixed(2),
           fuelType: this.fuelType,
-          fuelPrice: fuelPrice.toFixed(3),
+          fuelPrice: adjustedFuelPrice.toFixed(3),
         };
         this.history.push(ride);
         saveHistory(this.history);
