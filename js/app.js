@@ -51,10 +51,8 @@ const app = Vue.createApp({
         const route = routeData.routes[0];
         const distanceKm = route.distance / 1000;
         const durationMin = route.duration / 60;
-        // Haal de brandstofprijs op via de API
         const fuelPrice = await getFuelPrice(this.fuelType);
-        // Pas een korting toe: vermenigvuldig met 0.88, zodat bij 1,7 ongeveer 1,5 uitkomt
-        const adjustedFuelPrice = fuelPrice * 0.88;
+        const adjustedFuelPrice = fuelPrice * 0.9;
         const cost =
           ((distanceKm * this.consumption) / 100) * adjustedFuelPrice;
         this.result = {
