@@ -52,7 +52,7 @@ const app = Vue.createApp({
         const distanceKm = route.distance / 1000;
         const durationMin = route.duration / 60;
         const fuelPrice = await getFuelPrice(this.fuelType);
-        const adjustedFuelPrice = fuelPrice * 0.9;
+        const adjustedFuelPrice = fuelPrice;
         const cost =
           ((distanceKm * this.consumption) / 100) * adjustedFuelPrice;
         this.result = {
