@@ -1,20 +1,26 @@
 {
-    "name": "Brandstof App",
-    "short_name": "Brandstof",
-    "start_url": ".",
+    "name": "FuelTracker - Brandstofkosten Calculator",
+    "short_name": "FuelTracker",
+    "description": "Bereken brandstofkosten voor uw reis met actuele prijzen en routeplanning",
+    "start_url": "/",
     "display": "standalone",
     "background_color": "#ffffff",
     "theme_color": "#3b82f6",
+    "orientation": "portrait-primary",
     "icons": [
         {
-            "src": "icons/icon-192.png",
+            "src": "/icon-192.png",
             "sizes": "192x192",
             "type": "image/png"
         },
         {
-            "src": "icons/icon-512.png",
+            "src": "/icon-512.png",
             "sizes": "512x512",
             "type": "image/png"
         }
-    ]
+    ],
+    "categories": ["utilities", "navigation", "finance"],
+    "lang": "nl",
+    "dir": "ltr",
+    "prefer_related_applications": false
 }

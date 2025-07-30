@@ -1,186 +1,347 @@
 <!DOCTYPE html>
-<html lang="nl" class="dark">
-  <head>
-    <meta charset="UTF-8" />
-    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-    <title>Brandstof App</title>
-    <link rel="manifest" href="manifest.json" />
-    <meta name="apple-mobile-web-app-capable" content="yes" />
-    <meta name="apple-mobile-web-app-status-bar-style" content="default" />
-    <link rel="apple-touch-icon" href="icons/apple-touch-icon.png" />
+<html lang="nl">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <meta name="description" content="Bereken brandstofkosten voor uw reis met actuele prijzen en routeplanning">
+    <meta name="theme-color" content="#1a202c">
+    <title>FuelTracker - Brandstofkosten Calculator</title>
+    
+    <!-- PWA -->
+    <link rel="manifest" href="manifest.json">
+    <link rel="icon" type="image/png" sizes="192x192" href="icon-192.png">
+    <link rel="apple-touch-icon" href="icon-192.png">
+    
     <!-- Tailwind CSS -->
     <script src="https://cdn.tailwindcss.com"></script>
-    <link rel="stylesheet" href="css/style.css" />
-    <link rel="stylesheet" href="https://unpkg.com/leaflet/dist/leaflet.css" />
-    <link
-      rel="stylesheet"
-      href="https://cdn.jsdelivr.net/npm/sweetalert2@11/dist/sweetalert2.min.css"
-    />
-    <link
-      rel="stylesheet"
-      href="https://cdnjs.cloudflare.com/ajax/libs/animate.css/4.1.1/animate.min.css"
-    />
-  </head>
-  <body class="bg-gray-900 text-gray-200">
-    <nav
-      class="flex items-center justify-between px-4 py-3 bg-gray-800 shadow-md rounded-b-xl"
-    >
-      <div class="flex items-center">
-        <span class="text-xl font-semibold">Brandstof App</span>
-      </div>
-      <div class="flex items-center space-x-4">
-        <a class="hover:text-blue-400" href="#calculator">Calculator</a>
-        <a class="hover:text-blue-400" href="#historySection">Geschiedenis</a>
-        <a class="hover:text-blue-400" href="#chartSection">Grafiek</a>
-
-            <path
-              stroke-linecap="round"
-              stroke-linejoin="round"
-              stroke-width="2"
-              d="M12 3v2m0 14v2m9-9h-2M5 12H3m15.364-6.364l-1.414 1.414M7.05 16.95l-1.414 1.414M16.95 16.95l1.414 1.414M7.05 7.05L5.636 5.636"
-            />
-          </svg>
-        </button>
-      </div>
-    </nav>
-    <div id="app" class="container mx-auto px-4 py-6">
-      <!-- Rest van je content blijft hetzelfde, maar met aangepaste kleuren -->
-      <!-- Calculator Section -->
-      <section
-        id="calculator"
-        class="bg-gray-800 rounded-xl shadow-md p-6 mb-6 animate__animated animate__fadeIn"
-      >
-        <h1 class="text-2xl font-semibold mb-4">Ritprijs Calculator</h1>
-        <div class="mb-4">
-          <label class="block text-gray-300 mb-1">Vertrekadres</label>
-          <input
-            type="text"
-            v-model="departure"
-            placeholder="Bijv. Brussel"
-            class="w-full border border-gray-600 rounded-lg p-2 bg-gray-700 text-gray-200"
-          />
+    
+    <!-- Leaflet -->
+    <link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css" />
+    
+    <!-- Font Awesome -->
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.1/css/all.min.css">
+    
+    <!-- Custom CSS -->
+    <link rel="stylesheet" href="css/style.css">
+</head>
+<body class="min-h-screen bg-gray-50 dark:bg-gray-900 text-gray-900 dark:text-gray-100 transition-colors duration-200">
+    <!-- Loading Screen -->
+    <div id="loadingScreen" class="fixed inset-0 bg-white dark:bg-gray-900 flex items-center justify-center z-50">
+        <div class="text-center">
+            <div class="w-16 h-16 border-4 border-blue-500 border-t-transparent rounded-full animate-spin mb-4"></div>
+            <p class="text-gray-600 dark:text-gray-400">Laden...</p>
         </div>
-        <div class="mb-4">
-          <label class="block text-gray-300 mb-1">Bestemmingsadres</label>
-          <input
-            type="text"
-            v-model="destination"
-            placeholder="Bijv. Antwerpen"
-            class="w-full border border-gray-600 rounded-lg p-2 bg-gray-700 text-gray-200"
-          />
-        </div>
-        <div class="mb-4">
-          <label class="block text-gray-300 mb-1"
-            >Brandstofverbruik (L/100km)</label
-          >
-          <input
-            type="number"
-            v-model.number="consumption"
-            placeholder="Bijv. 7.5"
-            class="w-full border border-gray-600 rounded-lg p-2 bg-gray-700 text-gray-200"
-          />
-        </div>
-        <div class="mb-4">
-          <label class="block text-gray-300 mb-1">Kies brandstof</label>
-          <select
-            v-model="fuelType"
-            class="w-full border border-gray-600 rounded-lg p-2 bg-gray-700 text-gray-200"
-          >
-            <option value="Euro Super 95 E10 (€/L)">
-              Euro Super 95 E10 (€/L)
-            </option>
-            <option value="Road Diesel B7 (€/L)">Road Diesel B7 (€/L)</option>
-            <option value="Super Plus 98 E5 (€/L)">
-              Super Plus 98 E5 (€/L)
-            </option>
-            <option value="Super Plus 98 E10 (€/L)">
-              Super Plus 98 E10 (€/L)
-            </option>
-            <option value="Road Diesel B10 (€/L)">Road Diesel B10 (€/L)</option>
-          </select>
-        </div>
-        <button
-          class="w-full bg-blue-500 text-white rounded-lg py-2 hover:bg-blue-600 transition"
-          @click="calculateTrip"
-        >
-          Bereken Ritprijs
-        </button>
-      </section>
-      <!-- Result Section -->
-      <section
-        v-if="result"
-        id="result"
-        class="bg-gray-800 rounded-xl shadow-md p-6 mb-6 animate__animated animate__fadeIn"
-      >
-        <p><strong>Afstand:</strong> {{ result.distance }} km</p>
-        <p><strong>Reistijd:</strong> {{ result.duration }} minuten</p>
-        <p><strong>Kosten:</strong> €{{ result.cost }}</p>
-        <p>
-          <strong>Brandstofprijs per liter:</strong> €{{ result.fuelPrice }}
-        </p>
-      </section>
-      <!-- Map Section -->
-      <section
-        id="mapSection"
-        class="bg-gray-800 rounded-xl shadow-md p-6 mb-6 animate__animated animate__fadeIn"
-      >
-        <div id="map" class="h-64 rounded-lg"></div>
-      </section>
-      <!-- History Section -->
-      <section
-        id="historySection"
-        class="bg-gray-800 rounded-xl shadow-md p-6 mb-6 animate__animated animate__fadeIn"
-      >
-        <h2 class="text-xl font-semibold mb-4">Ritgeschiedenis</h2>
-        <template v-if="history.length">
-          <ul class="list-disc pl-5">
-            <li v-for="(ride, index) in history" :key="index" class="mb-2">
-              {{ ride.departure }} naar {{ ride.destination }}: {{ ride.distance
-              }} km, €{{ ride.cost }} ({{ ride.fuelType }} à €{{ ride.fuelPrice
-              }}/L)
-            </li>
-          </ul>
-        </template>
-        <template v-else>
-          <p>Er zijn nog geen recente acties uitgevoerd.</p>
-        </template>
-      </section>
-      <!-- Chart Section -->
-      <section
-        id="chartSection"
-        class="bg-gray-800 rounded-xl shadow-md p-6 animate__animated animate__fadeIn"
-      >
-        <h2 class="text-xl font-semibold mb-4">Ritkosten Grafiek</h2>
-        <template v-if="history.length">
-          <canvas id="chartCanvas"></canvas>
-        </template>
-        <template v-else>
-          <p>Er zijn nog geen recente acties uitgevoerd.</p>
-        </template>
-      </section>
     </div>
-    <footer class="bg-gray-800 shadow-md rounded-t-xl py-4 mt-6">
-      <div class="text-center text-gray-400">
-        &copy; 2025 Brandstof App. Alle rechten voorbehouden.
-      </div>
+
+    <!-- Navigation -->
+    <nav class="bg-white dark:bg-gray-800 shadow-lg sticky top-0 z-40">
+        <div class="container mx-auto px-4">
+            <div class="flex justify-between items-center h-16">
+                <div class="flex items-center space-x-3">
+                    <i class="fas fa-gas-pump text-2xl text-blue-500"></i>
+                    <span class="text-xl font-bold">FuelTracker</span>
+                </div>
+                
+                <div class="hidden md:flex items-center space-x-6">
+                    <a href="#calculator" class="nav-link">Calculator</a>
+                    <a href="#history" class="nav-link">Geschiedenis</a>
+                    <a href="#chart" class="nav-link">Statistieken</a>
+                    <button id="themeToggle" class="p-2 rounded-lg hover:bg-gray-100 dark:hover:bg-gray-700 transition-colors">
+                        <i class="fas fa-moon dark:hidden"></i>
+                        <i class="fas fa-sun hidden dark:block"></i>
+                    </button>
+                </div>
+                
+                <button class="md:hidden p-2" id="mobileMenuBtn">
+                    <i class="fas fa-bars text-xl"></i>
+                </button>
+            </div>
+        </div>
+        
+        <!-- Mobile Menu -->
+        <div id="mobileMenu" class="hidden md:hidden bg-white dark:bg-gray-800 border-t dark:border-gray-700">
+            <div class="px-4 py-2 space-y-2">
+                <a href="#calculator" class="block py-2 nav-link">Calculator</a>
+                <a href="#history" class="block py-2 nav-link">Geschiedenis</a>
+                <a href="#chart" class="block py-2 nav-link">Statistieken</a>
+            </div>
+        </div>
+    </nav>
+
+    <!-- Main Content -->
+    <main id="app" class="container mx-auto px-4 py-8">
+        <!-- Calculator Section -->
+        <section id="calculator" class="bg-white dark:bg-gray-800 rounded-xl shadow-md p-6 mb-8">
+            <h1 class="text-2xl font-bold mb-6 flex items-center">
+                <i class="fas fa-calculator mr-3 text-blue-500"></i>
+                Brandstofkosten Calculator
+            </h1>
+            
+            <div class="grid md:grid-cols-2 gap-6">
+                <!-- Departure Input -->
+                <div class="relative">
+                    <label class="block text-sm font-medium mb-2">Vertrekpunt</label>
+                    <div class="relative">
+                        <input 
+                            type="text" 
+                            v-model="departure"
+                            @input="searchDeparture"
+                            @focus="departureFocused = true"
+                            @blur="handleDepartureBlur"
+                            placeholder="Straat, stad of postcode..."
+                            class="w-full px-4 py-3 pr-10 border rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500 dark:bg-gray-700 dark:border-gray-600"
+                            required
+                        >
+                        <i class="fas fa-map-marker-alt absolute right-3 top-3.5 text-gray-400"></i>
+                    </div>
+                    
+                    <!-- Departure Suggestions -->
+                    <div v-if="departureSuggestions.length > 0 && departureFocused" 
+                         class="absolute z-10 w-full mt-1 bg-white dark:bg-gray-700 border dark:border-gray-600 rounded-lg shadow-lg max-h-60 overflow-y-auto">
+                        <div v-for="(suggestion, index) in departureSuggestions" 
+                             :key="index"
+                             @click="selectDeparture(suggestion)"
+                             class="px-4 py-3 hover:bg-gray-100 dark:hover:bg-gray-600 cursor-pointer border-b dark:border-gray-600 last:border-b-0">
+                            <div class="font-medium">{{ suggestion.name }}</div>
+                            <div class="text-sm text-gray-500 dark:text-gray-400">{{ suggestion.display_name }}</div>
+                        </div>
+                    </div>
+                </div>
+                
+                <!-- Destination Input -->
+                <div class="relative">
+                    <label class="block text-sm font-medium mb-2">Bestemming</label>
+                    <div class="relative">
+                        <input 
+                            type="text" 
+                            v-model="destination"
+                            @input="searchDestination"
+                            @focus="destinationFocused = true"
+                            @blur="handleDestinationBlur"
+                            placeholder="Straat, stad of postcode..."
+                            class="w-full px-4 py-3 pr-10 border rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500 dark:bg-gray-700 dark:border-gray-600"
+                            required
+                        >
+                        <i class="fas fa-map-marker-alt absolute right-3 top-3.5 text-gray-400"></i>
+                    </div>
+                    
+                    <!-- Destination Suggestions -->
+                    <div v-if="destinationSuggestions.length > 0 && destinationFocused" 
+                         class="absolute z-10 w-full mt-1 bg-white dark:bg-gray-700 border dark:border-gray-600 rounded-lg shadow-lg max-h-60 overflow-y-auto">
+                        <div v-for="(suggestion, index) in destinationSuggestions" 
+                             :key="index"
+                             @click="selectDestination(suggestion)"
+                             class="px-4 py-3 hover:bg-gray-100 dark:hover:bg-gray-600 cursor-pointer border-b dark:border-gray-600 last:border-b-0">
+                            <div class="font-medium">{{ suggestion.name }}</div>
+                            <div class="text-sm text-gray-500 dark:text-gray-400">{{ suggestion.display_name }}</div>
+                        </div>
+                    </div>
+                </div>
+                
+                <!-- Fuel Consumption Input -->
+                <div>
+                    <label class="block text-sm font-medium mb-2">Brandstofverbruik (L/100km)</label>
+                    <div class="relative">
+                        <input 
+                            type="number" 
+                            v-model.number="consumption"
+                            min="2"
+                            max="25"
+                            step="0.1"
+                            placeholder="Bijv. 6.5"
+                            class="w-full px-4 py-3 pr-10 border rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500 dark:bg-gray-700 dark:border-gray-600"
+                            required
+                        >
+                        <i class="fas fa-gas-pump absolute right-3 top-3.5 text-gray-400"></i>
+                    </div>
+                    <p class="text-xs text-gray-500 mt-1">Gemiddeld: 5-8 L/100km</p>
+                </div>
+                
+                <!-- Fuel Type Select -->
+                <div>
+                    <label class="block text-sm font-medium mb-2">Brandstoftype</label>
+                    <select 
+                        v-model="fuelType"
+                        class="w-full px-4 py-3 border rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500 dark:bg-gray-700 dark:border-gray-600"
+                    >
+                        <option value="euro95">Euro 95 (E10)</option>
+                        <option value="euro98">Euro 98 (E5)</option>
+                        <option value="diesel">Diesel (B7)</option>
+                        <option value="lpg">LPG</option>
+                    </select>
+                </div>
+            </div>
+            
+            <!-- Fuel Price Display -->
+            <div v-if="currentFuelPrice" class="mt-4 p-4 bg-blue-50 dark:bg-blue-900/20 rounded-lg">
+                <div class="flex items-center justify-between">
+                    <span class="text-sm font-medium">Huidige brandstofprijs:</span>
+                    <span class="font-bold text-lg">€ {{ currentFuelPrice.toFixed(3) }}/L</span>
+                </div>
+                <div class="text-xs text-gray-500 dark:text-gray-400 mt-1">
+                    <i class="fas fa-clock mr-1"></i>
+                    Laatst bijgewerkt: {{ lastPriceUpdate }}
+                </div>
+            </div>
+            
+            <!-- Calculate Button -->
+            <button 
+                @click="calculateTrip"
+                :disabled="isCalculating || !departure || !destination || !consumption"
+                class="w-full mt-6 py-3 bg-blue-500 hover:bg-blue-600 disabled:bg-gray-300 dark:disabled:bg-gray-600 text-white font-medium rounded-lg transition-colors flex items-center justify-center"
+            >
+                <i class="fas fa-route mr-2" v-if="!isCalculating"></i>
+                <span v-if="!isCalculating">Bereken Route & Kosten</span>
+                <span v-else class="flex items-center">
+                    <svg class="animate-spin h-5 w-5 mr-3" viewBox="0 0 24 24">
+                        <circle class="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" stroke-width="4" fill="none"></circle>
+                        <path class="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"></path>
+                    </svg>
+                    Berekenen...
+                </span>
+            </button>
+        </section>
+        
+        <!-- Result Section -->
+        <section v-if="result" class="bg-white dark:bg-gray-800 rounded-xl shadow-md p-6 mb-8 animate-fade-in">
+            <h2 class="text-xl font-bold mb-4 flex items-center">
+                <i class="fas fa-poll mr-3 text-green-500"></i>
+                Resultaten
+            </h2>
+            
+            <div class="grid md:grid-cols-4 gap-4">
+                <div class="bg-gray-50 dark:bg-gray-700 rounded-lg p-4 text-center">
+                    <i class="fas fa-road text-2xl text-blue-500 mb-2"></i>
+                    <p class="text-sm text-gray-600 dark:text-gray-400">Afstand</p>
+                    <p class="text-2xl font-bold">{{ result.distance }} km</p>
+                </div>
+                
+                <div class="bg-gray-50 dark:bg-gray-700 rounded-lg p-4 text-center">
+                    <i class="fas fa-clock text-2xl text-purple-500 mb-2"></i>
+                    <p class="text-sm text-gray-600 dark:text-gray-400">Reistijd</p>
+                    <p class="text-2xl font-bold">{{ formatDuration(result.duration) }}</p>
+                </div>
+                
+                <div class="bg-gray-50 dark:bg-gray-700 rounded-lg p-4 text-center">
+                    <i class="fas fa-euro-sign text-2xl text-green-500 mb-2"></i>
+                    <p class="text-sm text-gray-600 dark:text-gray-400">Kosten</p>
+                    <p class="text-2xl font-bold">€ {{ result.cost }}</p>
+                </div>
+                
+                <div class="bg-gray-50 dark:bg-gray-700 rounded-lg p-4 text-center">
+                    <i class="fas fa-leaf text-2xl text-green-600 mb-2"></i>
+                    <p class="text-sm text-gray-600 dark:text-gray-400">CO₂ Uitstoot</p>
+                    <p class="text-2xl font-bold">{{ result.co2 }} kg</p>
+                </div>
+            </div>
+            
+            <!-- Map -->
+            <div id="map" class="mt-6 h-96 rounded-lg overflow-hidden"></div>
+        </section>
+        
+        <!-- History Section -->
+        <section id="history" class="bg-white dark:bg-gray-800 rounded-xl shadow-md p-6 mb-8">
+            <div class="flex justify-between items-center mb-4">
+                <h2 class="text-xl font-bold flex items-center">
+                    <i class="fas fa-history mr-3 text-orange-500"></i>
+                    Geschiedenis
+                </h2>
+                <button 
+                    v-if="history.length > 0"
+                    @click="exportHistory"
+                    class="px-4 py-2 bg-gray-100 dark:bg-gray-700 hover:bg-gray-200 dark:hover:bg-gray-600 rounded-lg text-sm transition-colors"
+                >
+                    <i class="fas fa-download mr-2"></i>
+                    Exporteer CSV
+                </button>
+            </div>
+            
+            <div v-if="history.length === 0" class="text-center py-8 text-gray-500 dark:text-gray-400">
+                <i class="fas fa-inbox text-4xl mb-3"></i>
+                <p>Nog geen ritten berekend</p>
+            </div>
+            
+            <div v-else class="space-y-3">
+                <div v-for="(trip, index) in reversedHistory" 
+                     :key="index"
+                     class="bg-gray-50 dark:bg-gray-700 rounded-lg p-4 hover:shadow-md transition-shadow">
+                    <div class="flex justify-between items-start">
+                        <div class="flex-1">
+                            <div class="font-medium mb-1">
+                                <i class="fas fa-map-marker-alt text-blue-500 mr-1"></i>
+                                {{ trip.departure }} → {{ trip.destination }}
+                            </div>
+                            <div class="text-sm text-gray-600 dark:text-gray-400 space-x-4">
+                                <span><i class="fas fa-road mr-1"></i>{{ trip.distance }} km</span>
+                                <span><i class="fas fa-euro-sign mr-1"></i>{{ trip.cost }}</span>
+                                <span><i class="fas fa-gas-pump mr-1"></i>{{ getFuelTypeName(trip.fuelType) }}</span>
+                                <span><i class="fas fa-calendar mr-1"></i>{{ formatDate(trip.date) }}</span>
+                            </div>
+                        </div>
+                        <button 
+                            @click="deleteTrip(index)"
+                            class="ml-4 text-red-500 hover:text-red-700 transition-colors"
+                        >
+                            <i class="fas fa-trash"></i>
+                        </button>
+                    </div>
+                </div>
+            </div>
+        </section>
+        
+        <!-- Chart Section -->
+        <section id="chart" class="bg-white dark:bg-gray-800 rounded-xl shadow-md p-6">
+            <h2 class="text-xl font-bold mb-4 flex items-center">
+                <i class="fas fa-chart-line mr-3 text-purple-500"></i>
+                Statistieken
+            </h2>
+            
+            <div v-if="history.length === 0" class="text-center py-8 text-gray-500 dark:text-gray-400">
+                <i class="fas fa-chart-area text-4xl mb-3"></i>
+                <p>Nog geen data beschikbaar</p>
+            </div>
+            
+            <div v-else>
+                <canvas id="costChart" class="mb-6"></canvas>
+                
+                <div class="grid md:grid-cols-3 gap-4 mt-6">
+                    <div class="bg-gray-50 dark:bg-gray-700 rounded-lg p-4 text-center">
+                        <p class="text-sm text-gray-600 dark:text-gray-400">Totale Afstand</p>
+                        <p class="text-2xl font-bold">{{ totalDistance }} km</p>
+                    </div>
+                    <div class="bg-gray-50 dark:bg-gray-700 rounded-lg p-4 text-center">
+                        <p class="text-sm text-gray-600 dark:text-gray-400">Totale Kosten</p>
+                        <p class="text-2xl font-bold">€ {{ totalCost }}</p>
+                    </div>
+                    <div class="bg-gray-50 dark:bg-gray-700 rounded-lg p-4 text-center">
+                        <p class="text-sm text-gray-600 dark:text-gray-400">Gemiddelde Kosten/km</p>
+                        <p class="text-2xl font-bold">€ {{ avgCostPerKm }}</p>
+                    </div>
+                </div>
+            </div>
+        </section>
+    </main>
+    
+    <!-- Footer -->
+    <footer class="bg-white dark:bg-gray-800 shadow-lg mt-8">
+        <div class="container mx-auto px-4 py-6">
+            <div class="text-center text-gray-600 dark:text-gray-400">
+                <p>&copy; 2025 FuelTracker. Alle rechten voorbehouden.</p>
+                <p class="text-sm mt-2">
+                    <a href="#" class="hover:text-blue-500 transition-colors">Privacy</a>
+                    <span class="mx-2">•</span>
+                    <a href="#" class="hover:text-blue-500 transition-colors">Voorwaarden</a>
+                    <span class="mx-2">•</span>
+                    <a href="#" class="hover:text-blue-500 transition-colors">Contact</a>
+                </p>
+            </div>
+        </div>
     </footer>
-    <script src="https://unpkg.com/leaflet/dist/leaflet.js"></script>
+    
+    <!-- Scripts -->
+    <script src="https://unpkg.com/vue@3/dist/vue.global.prod.js"></script>
+    <script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"></script>
     <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
-    <script src="https://cdn.jsdelivr.net/npm/vue@3/dist/vue.global.prod.js"></script>
-    <script src="https://cdn.jsdelivr.net/npm/sweetalert2@11"></script>
     <script type="module" src="js/app.js"></script>
-    <script>
-      // Service worker registratie
-      if ("serviceWorker" in navigator) {
-        navigator.serviceWorker
-          .register("service-worker.js")
-          .then((registration) => {
-            console.log("ServiceWorker geregistreerd:", registration.scope);
-          })
-          .catch((error) => {
-            console.error("ServiceWorker registratie mislukt:", error);
-          });
-      }
-    </script>
-  </body>
+</body>
 </html>
