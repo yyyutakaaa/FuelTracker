@@ -61,10 +61,15 @@ export class FuelPriceService {
             'lpg': 'LPG (€/L)'
         };
         
+        const controller = new AbortController();
+        const timeoutId = setTimeout(() => controller.abort(), 5000);
+        
         const response = await fetch(
             'https://bestat.statbel.fgov.be/bestat/api/views/665e2960-bf86-4d64-b4a8-90f2d30ea892/result/JSON',
-            { timeout: 5000 }
+            { signal: controller.signal }
         );
+        
+        clearTimeout(timeoutId);
         
         if (!response.ok) throw new Error('StatBel API failed');
         

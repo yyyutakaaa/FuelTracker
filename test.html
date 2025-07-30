@@ -1,0 +1,80 @@
+<!DOCTYPE html>
+<html lang="nl">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>FuelTracker - Debug Test</title>
+    <style>
+        body {
+            font-family: Arial, sans-serif;
+            padding: 20px;
+            max-width: 800px;
+            margin: 0 auto;
+        }
+        .status {
+            padding: 10px;
+            margin: 10px 0;
+            border-radius: 5px;
+        }
+        .success { background: #d4edda; color: #155724; }
+        .error { background: #f8d7da; color: #721c24; }
+        .info { background: #d1ecf1; color: #0c5460; }
+    </style>
+</head>
+<body>
+    <h1>FuelTracker Debug Test</h1>
+    <div id="status"></div>
+    
+    <script>
+        const log = (message, type = 'info') => {
+            const div = document.createElement('div');
+            div.className = `status ${type}`;
+            div.textContent = `${new Date().toLocaleTimeString()} - ${message}`;
+            document.getElementById('status').appendChild(div);
+            console.log(message);
+        };
+        
+        // Test 1: Check Vue.js
+        log('Testing Vue.js...');
+        const vueScript = document.createElement('script');
+        vueScript.src = 'https://unpkg.com/vue@3/dist/vue.global.prod.js';
+        vueScript.onload = () => log('✓ Vue.js loaded', 'success');
+        vueScript.onerror = () => log('✗ Vue.js failed to load', 'error');
+        document.head.appendChild(vueScript);
+        
+        // Test 2: Check if modules can be imported
+        setTimeout(() => {
+            log('Testing module imports...');
+            import('./js/storage.js')
+                .then(module => {
+                    log('✓ Storage module loaded', 'success');
+                    const storage = new module.StorageService();
+                    log('✓ StorageService instantiated', 'success');
+                })
+                .catch(err => log(`✗ Module import failed: ${err.message}`, 'error'));
+        }, 1000);
+        
+        // Test 3: Check localStorage
+        try {
+            localStorage.setItem('test', 'value');
+            localStorage.removeItem('test');
+            log('✓ localStorage working', 'success');
+        } catch (err) {
+            log('✗ localStorage failed: ' + err.message, 'error');
+        }
+        
+        // Test 4: Check fetch API
+        log('Testing fetch API...');
+        fetch('https://api.github.com/zen')
+            .then(res => res.text())
+            .then(() => log('✓ Fetch API working', 'success'))
+            .catch(err => log('✗ Fetch failed: ' + err.message, 'error'));
+            
+        // Test 5: Direct app test
+        setTimeout(() => {
+            log('Starting main app test...');
+            window.location.href = 'index.html';
+        }, 5000);
+    </script>
+</body>
+</html>
