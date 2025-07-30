@@ -12,10 +12,10 @@ class FuelPriceService {
     async getCurrentPrice(fuelType) {
         // Simplified - just return fixed prices for now
         const prices = {
-            'euro95': 1.649,
-            'euro98': 1.759,
-            'diesel': 1.689,
-            'lpg': 0.749
+            'euro95': 1.46,
+            'euro98': 1.605,
+            'diesel': 1.576,
+            'lpg': 0.715
         };
         return prices[fuelType] || 1.70;
     }
