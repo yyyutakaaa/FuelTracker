@@ -41,12 +41,12 @@ export class FuelPriceService {
             }
         }
         
-        // Final fallback prices (December 2024 Belgian averages)
+        // Final fallback prices (July 2025 Belgian averages)
         const fallbackPrices = {
-            'euro95': 1.48,
-            'euro98': 1.659,
-            'diesel': 1.529,
-            'lpg': 0.749
+            'euro95': 1.46,
+            'euro98': 1.605,
+            'diesel': 1.576,
+            'lpg': 0.715
         };
         
         return fallbackPrices[fuelType] || 1.70;
