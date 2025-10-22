@@ -128,23 +128,11 @@ class FuelPriceService {
         return cached ? new Date(cached.timestamp) : null;
     }
 
-    // Get price adjusted for gas station brand
+    // Get price for station - returns base price from API without modifications
     getPriceForStation(basePrice, gasStation) {
-        // Price modifiers based on typical Belgian market differences
-        const stationModifiers = {
-            'average': 0,          // Base price (market average)
-            'shell': 0.03,        // Premium brand, typically 2-4 cents higher
-            'totalenergies': 0.01, // Slightly above average
-            'q8': 0.01,           // Slightly above average
-            'esso': 0.01,         // Slightly above average
-            'gabriels': -0.02,    // Budget brand, typically 2-3 cents lower
-            'octaplus': -0.02,    // Budget brand, typically 2-3 cents lower
-            'dats24': -0.04,      // Low-cost brand, typically 3-5 cents lower
-            'lukoil': -0.03       // Budget brand, typically 2-4 cents lower
-        };
-
-        const modifier = stationModifiers[gasStation] || 0;
-        return Math.max(0.5, basePrice + modifier); // Ensure minimum price
+        // All stations show the same price from the API
+        // This ensures accurate pricing based on official Belgian data
+        return basePrice;
     }
 
     getStationName(stationCode) {
