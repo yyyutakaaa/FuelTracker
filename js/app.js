@@ -43,13 +43,13 @@ class FuelPriceService {
             }
         }
 
-        // Final fallback prices (July 2025 Belgian averages)
+        // Final fallback prices (October 2025 Belgian averages)
         console.warn('Using hardcoded fallback prices');
         const fallbackPrices = {
-            'euro95': 1.46,
-            'euro98': 1.605,
-            'diesel': 1.576,
-            'lpg': 0.715
+            'euro95': 1.644,
+            'euro98': 1.785,
+            'diesel': 1.712,
+            'lpg': 0.749
         };
 
         return fallbackPrices[fuelType] || 1.70;
@@ -92,12 +92,12 @@ class FuelPriceService {
     }
 
     async fetchFallbackPrices(fuelType) {
-        // Fallback to hardcoded prices
+        // Fallback to hardcoded prices (October 2025 Belgian averages)
         const prices = {
-            'euro95': 1.46,
-            'euro98': 1.605,
-            'diesel': 1.576,
-            'lpg': 0.715
+            'euro95': 1.644,
+            'euro98': 1.785,
+            'diesel': 1.712,
+            'lpg': 0.749
         };
         return prices[fuelType] || null;
     }
