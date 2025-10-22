@@ -494,7 +494,23 @@ createApp({
                 alert('Vul alle velden correct in (brandstofverbruik: 2-25 L/100km)');
                 return;
             }
-            
+
+            // Validate custom price if custom station is selected
+            if (this.gasStation === 'custom' && (!this.customPrice || this.customPrice <= 0)) {
+                alert('Vul een geldige aangepaste brandstofprijs in (minimaal €0.50/L)');
+                return;
+            }
+
+            // Ensure fuel price is updated before calculation
+            if (this.gasStation === 'custom' && this.customPrice > 0) {
+                this.currentFuelPrice = this.customPrice;
+            }
+
+            if (!this.currentFuelPrice || this.currentFuelPrice <= 0) {
+                alert('Brandstofprijs kon niet worden opgehaald. Probeer het opnieuw.');
+                return;
+            }
+
             this.isCalculating = true;
             
             try {
