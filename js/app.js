@@ -127,6 +127,38 @@ class FuelPriceService {
         const cached = this.cache.get(cacheKey);
         return cached ? new Date(cached.timestamp) : null;
     }
+
+    // Get price adjusted for gas station brand
+    getPriceForStation(basePrice, gasStation) {
+        // Price modifiers based on typical Belgian market differences
+        const stationModifiers = {
+            'average': 0,          // Base price (market average)
+            'shell': 0.03,        // Premium brand, typically 2-4 cents higher
+            'totalenergies': 0.01, // Slightly above average
+            'q8': 0.01,           // Slightly above average
+            'esso': 0.01,         // Slightly above average
+            'octaplus': -0.02,    // Budget brand, typically 2-3 cents lower
+            'dats24': -0.04,      // Low-cost brand, typically 3-5 cents lower
+            'lukoil': -0.03       // Budget brand, typically 2-4 cents lower
+        };
+
+        const modifier = stationModifiers[gasStation] || 0;
+        return Math.max(0.5, basePrice + modifier); // Ensure minimum price
+    }
+
+    getStationName(stationCode) {
+        const names = {
+            'average': 'Gemiddelde prijs',
+            'shell': 'Shell',
+            'totalenergies': 'TotalEnergies',
+            'q8': 'Q8',
+            'esso': 'Esso',
+            'octaplus': 'Octa+',
+            'dats24': 'Dats 24',
+            'lukoil': 'Lukoil'
+        };
+        return names[stationCode] || stationCode;
+    }
 }
 
 class StorageService {
@@ -256,6 +288,7 @@ createApp({
             destination: '',
             consumption: null,
             fuelType: 'euro95',
+            gasStation: 'average',
             
             // Autocomplete
             departureSuggestions: [],
@@ -342,6 +375,10 @@ createApp({
         fuelType(newType) {
             // Update price when fuel type changes
             this.updateFuelPrice();
+        },
+        gasStation(newStation) {
+            // Update price when gas station changes
+            this.updateFuelPrice();
         }
     },
 
@@ -353,7 +390,11 @@ createApp({
                     this.fuelService.clearCache();
                 }
 
-                this.currentFuelPrice = await this.fuelService.getCurrentPrice(this.fuelType);
+                // Get base price from API
+                const basePrice = await this.fuelService.getCurrentPrice(this.fuelType);
+
+                // Apply gas station modifier
+                this.currentFuelPrice = this.fuelService.getPriceForStation(basePrice, this.gasStation);
 
                 const cacheTimestamp = this.fuelService.getCacheTimestamp(this.fuelType);
                 if (cacheTimestamp) {
@@ -501,6 +542,7 @@ createApp({
                     distance: distanceKm.toFixed(1),
                     cost: cost.toFixed(2),
                     fuelType: this.fuelType,
+                    gasStation: this.gasStation,
                     fuelPrice: this.currentFuelPrice.toFixed(3),
                     date: new Date().toISOString(),
                     co2: co2.toFixed(1)
@@ -550,9 +592,10 @@ createApp({
         },
         
         exportHistory() {
-            let csv = 'Datum,Vertrek,Bestemming,Afstand,Kosten,Brandstof\n';
+            let csv = 'Datum,Vertrek,Bestemming,Afstand,Kosten,Brandstof,Tankstation,Prijs\n';
             this.history.forEach(trip => {
-                csv += `${new Date(trip.date).toLocaleDateString()},${trip.departure},${trip.destination},${trip.distance},${trip.cost},${trip.fuelType}\n`;
+                const stationName = this.fuelService.getStationName(trip.gasStation || 'average');
+                csv += `${new Date(trip.date).toLocaleDateString()},${trip.departure},${trip.destination},${trip.distance},${trip.cost},${trip.fuelType},${stationName},${trip.fuelPrice || 'N/A'}\n`;
             });
             
             const blob = new Blob([csv], { type: 'text/csv' });
@@ -581,6 +624,10 @@ createApp({
                 'lpg': 'LPG'
             };
             return names[type] || type;
+        },
+
+        getStationName(stationCode) {
+            return this.fuelService ? this.fuelService.getStationName(stationCode) : stationCode;
         },
         
         setupThemeToggle() {
