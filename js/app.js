@@ -145,7 +145,8 @@ class FuelPriceService {
             'gabriels': 'Gabriels',
             'octaplus': 'Octa+',
             'dats24': 'Dats 24',
-            'lukoil': 'Lukoil'
+            'lukoil': 'Lukoil',
+            'custom': 'Aangepaste prijs'
         };
         return names[stationCode] || stationCode;
     }
@@ -279,6 +280,7 @@ createApp({
             consumption: null,
             fuelType: 'euro95',
             gasStation: 'average',
+            customPrice: null,
             
             // Autocomplete
             departureSuggestions: [],
@@ -369,6 +371,12 @@ createApp({
         gasStation(newStation) {
             // Update price when gas station changes
             this.updateFuelPrice();
+        },
+        customPrice(newPrice) {
+            // Update price when custom price changes
+            if (this.gasStation === 'custom' && newPrice && newPrice > 0) {
+                this.updateFuelPrice();
+            }
         }
     },
 
@@ -376,6 +384,13 @@ createApp({
         // Fuel price methods
         async updateFuelPrice(forceRefresh = false) {
             try {
+                // If custom price is selected, use that
+                if (this.gasStation === 'custom' && this.customPrice && this.customPrice > 0) {
+                    this.currentFuelPrice = this.customPrice;
+                    this.lastPriceUpdate = 'Handmatig ingevoerd';
+                    return;
+                }
+
                 if (forceRefresh) {
                     this.fuelService.clearCache();
                 }
