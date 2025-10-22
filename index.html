@@ -174,12 +174,28 @@
             <!-- Fuel Price Display -->
             <div v-if="currentFuelPrice" class="mt-4 p-4 bg-blue-50 dark:bg-blue-900/20 rounded-lg">
                 <div class="flex items-center justify-between">
-                    <span class="text-sm font-medium">Huidige brandstofprijs:</span>
-                    <span class="font-bold text-lg">€ {{ currentFuelPrice.toFixed(3) }}/L</span>
+                    <div class="flex-1">
+                        <span class="text-sm font-medium">Huidige brandstofprijs:</span>
+                        <span class="font-bold text-lg ml-2">€ {{ currentFuelPrice.toFixed(3) }}/L</span>
+                    </div>
+                    <button
+                        @click="refreshFuelPrice"
+                        :disabled="isRefreshingPrice"
+                        class="px-3 py-1.5 bg-blue-500 hover:bg-blue-600 disabled:bg-gray-300 dark:disabled:bg-gray-600 text-white text-sm rounded-lg transition-colors flex items-center"
+                        title="Ververs brandstofprijs"
+                    >
+                        <i class="fas fa-sync-alt mr-1.5" :class="{ 'animate-spin': isRefreshingPrice }"></i>
+                        <span v-if="!isRefreshingPrice">Ververs</span>
+                        <span v-else>Laden...</span>
+                    </button>
                 </div>
-                <div class="text-xs text-gray-500 dark:text-gray-400 mt-1">
+                <div class="text-xs text-gray-500 dark:text-gray-400 mt-2">
                     <i class="fas fa-clock mr-1"></i>
                     Laatst bijgewerkt: {{ lastPriceUpdate }}
+                </div>
+                <div class="text-xs text-gray-500 dark:text-gray-400 mt-1">
+                    <i class="fas fa-info-circle mr-1"></i>
+                    Prijzen worden automatisch elke 6 uur bijgewerkt
                 </div>
             </div>
             

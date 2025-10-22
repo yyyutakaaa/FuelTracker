@@ -6,18 +6,126 @@ const { createApp } = Vue;
 class FuelPriceService {
     constructor() {
         this.cache = new Map();
-        this.cacheDuration = 24 * 60 * 60 * 1000;
+        this.cacheDuration = 24 * 60 * 60 * 1000; // 24 hours
+        this.sources = [
+            {
+                name: 'primary',
+                fetch: this.fetchPrimaryPrices.bind(this)
+            },
+            {
+                name: 'fallback',
+                fetch: this.fetchFallbackPrices.bind(this)
+            }
+        ];
     }
-    
+
     async getCurrentPrice(fuelType) {
-        // Simplified - just return fixed prices for now
+        // Check cache first
+        const cacheKey = `price_${fuelType}`;
+        const cached = this.getFromCache(cacheKey);
+        if (cached) {
+            console.log(`Using cached price for ${fuelType}: €${cached}`);
+            return cached;
+        }
+
+        // Try each source in order
+        for (const source of this.sources) {
+            try {
+                console.log(`Fetching price from ${source.name}...`);
+                const price = await source.fetch(fuelType);
+                if (price && price > 0) {
+                    console.log(`Got price from ${source.name}: €${price}`);
+                    this.setCache(cacheKey, price);
+                    return price;
+                }
+            } catch (error) {
+                console.warn(`Failed to fetch from ${source.name}:`, error);
+            }
+        }
+
+        // Final fallback prices (July 2025 Belgian averages)
+        console.warn('Using hardcoded fallback prices');
+        const fallbackPrices = {
+            'euro95': 1.46,
+            'euro98': 1.605,
+            'diesel': 1.576,
+            'lpg': 0.715
+        };
+
+        return fallbackPrices[fuelType] || 1.70;
+    }
+
+    async fetchPrimaryPrices(fuelType) {
+        // Belgian government StatBel API
+        const fuelTypeMapping = {
+            'euro95': 'Euro Super 95 E10 (€/L)',
+            'euro98': 'Super Plus 98 E5 (€/L)',
+            'diesel': 'Road Diesel B7 (€/L)',
+            'lpg': 'LPG (€/L)'
+        };
+
+        const controller = new AbortController();
+        const timeoutId = setTimeout(() => controller.abort(), 5000);
+
+        const response = await fetch(
+            'https://bestat.statbel.fgov.be/bestat/api/views/665e2960-bf86-4d64-b4a8-90f2d30ea892/result/JSON',
+            { signal: controller.signal }
+        );
+
+        clearTimeout(timeoutId);
+
+        if (!response.ok) throw new Error('StatBel API failed');
+
+        const data = await response.json();
+        const mappedType = fuelTypeMapping[fuelType];
+
+        // Get most recent price
+        const relevantData = data.facts
+            .filter(item => item['Product'] === mappedType && item['Price incl. VAT'] !== null)
+            .sort((a, b) => new Date(b['Period'] || 0) - new Date(a['Period'] || 0));
+
+        if (relevantData.length > 0) {
+            return parseFloat(relevantData[0]['Price incl. VAT']);
+        }
+
+        throw new Error('No data found in StatBel');
+    }
+
+    async fetchFallbackPrices(fuelType) {
+        // Fallback to hardcoded prices
         const prices = {
             'euro95': 1.46,
             'euro98': 1.605,
             'diesel': 1.576,
             'lpg': 0.715
         };
-        return prices[fuelType] || 1.70;
+        return prices[fuelType] || null;
+    }
+
+    getFromCache(key) {
+        const cached = this.cache.get(key);
+        if (cached && Date.now() - cached.timestamp < this.cacheDuration) {
+            return cached.value;
+        }
+        this.cache.delete(key);
+        return null;
+    }
+
+    setCache(key, value) {
+        this.cache.set(key, {
+            value,
+            timestamp: Date.now()
+        });
+    }
+
+    clearCache() {
+        this.cache.clear();
+    }
+
+    getCacheTimestamp(fuelType) {
+        const cacheKey = `price_${fuelType}`;
+        const cached = this.cache.get(cacheKey);
+        return cached ? new Date(cached.timestamp) : null;
     }
 }
 
@@ -165,16 +273,18 @@ createApp({
             // Fuel prices
             currentFuelPrice: 1.70,
             lastPriceUpdate: 'Nu',
-            
+            isRefreshingPrice: false,
+
             // Services
             fuelService: null,
             storageService: null,
             mapService: null,
             chartService: null,
-            
+
             // Timers
             departureTimer: null,
-            destinationTimer: null
+            destinationTimer: null,
+            priceRefreshInterval: null
         };
     },
     
@@ -189,11 +299,15 @@ createApp({
         
         // Load history
         this.history = this.storageService.loadHistory();
-        
-        // Get fuel price
-        this.currentFuelPrice = await this.fuelService.getCurrentPrice(this.fuelType);
-        this.lastPriceUpdate = new Date().toLocaleString('nl-BE');
-        
+
+        // Get initial fuel price
+        await this.updateFuelPrice();
+
+        // Setup automatic price refresh every 6 hours
+        this.priceRefreshInterval = setInterval(() => {
+            this.updateFuelPrice(true);
+        }, 6 * 60 * 60 * 1000);
+
         // Initialize map after DOM ready
         this.$nextTick(() => {
             this.mapService.initMap();
@@ -224,7 +338,48 @@ createApp({
         }
     },
     
+    watch: {
+        fuelType(newType) {
+            // Update price when fuel type changes
+            this.updateFuelPrice();
+        }
+    },
+
     methods: {
+        // Fuel price methods
+        async updateFuelPrice(forceRefresh = false) {
+            try {
+                if (forceRefresh) {
+                    this.fuelService.clearCache();
+                }
+
+                this.currentFuelPrice = await this.fuelService.getCurrentPrice(this.fuelType);
+
+                const cacheTimestamp = this.fuelService.getCacheTimestamp(this.fuelType);
+                if (cacheTimestamp) {
+                    this.lastPriceUpdate = cacheTimestamp.toLocaleString('nl-BE');
+                } else {
+                    this.lastPriceUpdate = new Date().toLocaleString('nl-BE');
+                }
+            } catch (error) {
+                console.error('Error updating fuel price:', error);
+            }
+        },
+
+        async refreshFuelPrice() {
+            this.isRefreshingPrice = true;
+            try {
+                // Clear cache and force refresh
+                this.fuelService.clearCache();
+                await this.updateFuelPrice();
+            } catch (error) {
+                console.error('Error refreshing price:', error);
+                alert('Fout bij het ophalen van de brandstofprijs');
+            } finally {
+                this.isRefreshingPrice = false;
+            }
+        },
+
         // Autocomplete
         searchDeparture() {
             clearTimeout(this.departureTimer);
@@ -445,6 +600,19 @@ createApp({
             btn?.addEventListener('click', () => {
                 menu?.classList.toggle('hidden');
             });
+        }
+    },
+
+    beforeUnmount() {
+        // Clean up intervals
+        if (this.priceRefreshInterval) {
+            clearInterval(this.priceRefreshInterval);
+        }
+        if (this.departureTimer) {
+            clearTimeout(this.departureTimer);
+        }
+        if (this.destinationTimer) {
+            clearTimeout(this.destinationTimer);
         }
     }
 }).mount('#app');
