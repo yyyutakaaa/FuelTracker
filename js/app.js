@@ -137,6 +137,7 @@ class FuelPriceService {
             'totalenergies': 0.01, // Slightly above average
             'q8': 0.01,           // Slightly above average
             'esso': 0.01,         // Slightly above average
+            'gabriels': -0.02,    // Budget brand, typically 2-3 cents lower
             'octaplus': -0.02,    // Budget brand, typically 2-3 cents lower
             'dats24': -0.04,      // Low-cost brand, typically 3-5 cents lower
             'lukoil': -0.03       // Budget brand, typically 2-4 cents lower
@@ -153,6 +154,7 @@ class FuelPriceService {
             'totalenergies': 'TotalEnergies',
             'q8': 'Q8',
             'esso': 'Esso',
+            'gabriels': 'Gabriels',
             'octaplus': 'Octa+',
             'dats24': 'Dats 24',
             'lukoil': 'Lukoil'
