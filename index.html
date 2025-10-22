@@ -4,9 +4,14 @@
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <meta name="description" content="Bereken brandstofkosten voor uw reis met actuele prijzen en routeplanning">
-    <meta name="theme-color" content="#1a202c">
+    <meta name="theme-color" content="#ffffff">
     <title>FuelTracker - Brandstofkosten Calculator</title>
-    
+
+    <!-- Google Fonts - Inter -->
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700;800&display=swap" rel="stylesheet">
+
     <!-- PWA -->
     <link rel="manifest" href="manifest.json">
     <link rel="icon" type="image/png" sizes="192x192" href="icon-192.png">
@@ -24,7 +29,7 @@
     <!-- Custom CSS -->
     <link rel="stylesheet" href="css/style.css">
 </head>
-<body class="min-h-screen bg-gray-50 dark:bg-gray-900 text-gray-900 dark:text-gray-100 transition-colors duration-200">
+<body class="min-h-screen bg-white text-gray-900 transition-colors duration-200">
     <!-- Loading Screen -->
     <div id="loadingScreen" class="fixed inset-0 bg-white dark:bg-gray-900 flex items-center justify-center z-50">
         <div class="text-center">
@@ -33,36 +38,47 @@
         </div>
     </div>
 
-    <!-- Navigation -->
-    <nav class="bg-white dark:bg-gray-800 shadow-lg sticky top-0 z-40">
+    <!-- Navigation - Ultra Modern -->
+    <nav>
         <div class="container mx-auto px-4">
-            <div class="flex justify-between items-center h-16">
+            <div class="flex justify-between items-center h-20">
                 <div class="flex items-center space-x-3">
-                    <i class="fas fa-gas-pump text-2xl text-blue-500"></i>
-                    <span class="text-xl font-bold">FuelTracker</span>
+                    <div class="w-12 h-12 bg-gradient-to-br from-blue-500 to-purple-600 rounded-xl flex items-center justify-center shadow-lg">
+                        <i class="fas fa-gas-pump text-xl text-white"></i>
+                    </div>
+                    <span class="text-2xl font-bold text-gradient">FuelTracker</span>
                 </div>
-                
-                <div class="hidden md:flex items-center space-x-6">
-                    <a href="#calculator" class="nav-link">Calculator</a>
-                    <a href="#history" class="nav-link">Geschiedenis</a>
-                    <a href="#chart" class="nav-link">Statistieken</a>
-                    <button id="themeToggle" class="p-2 rounded-lg hover:bg-gray-100 dark:hover:bg-gray-700 transition-colors">
-                        <i class="fas fa-moon dark:hidden"></i>
-                    </button>
+
+                <div class="hidden md:flex items-center space-x-2">
+                    <a href="#calculator" class="nav-link">
+                        <i class="fas fa-calculator mr-2"></i>Calculator
+                    </a>
+                    <a href="#history" class="nav-link">
+                        <i class="fas fa-history mr-2"></i>Geschiedenis
+                    </a>
+                    <a href="#chart" class="nav-link">
+                        <i class="fas fa-chart-line mr-2"></i>Statistieken
+                    </a>
                 </div>
-                
-                <button class="md:hidden p-2" id="mobileMenuBtn">
+
+                <button class="md:hidden p-2 rounded-lg hover:bg-gray-100 transition" id="mobileMenuBtn">
                     <i class="fas fa-bars text-xl"></i>
                 </button>
             </div>
         </div>
-        
+
         <!-- Mobile Menu -->
-        <div id="mobileMenu" class="hidden md:hidden bg-white dark:bg-gray-800 border-t dark:border-gray-700">
-            <div class="px-4 py-2 space-y-2">
-                <a href="#calculator" class="block py-2 nav-link">Calculator</a>
-                <a href="#history" class="block py-2 nav-link">Geschiedenis</a>
-                <a href="#chart" class="block py-2 nav-link">Statistieken</a>
+        <div id="mobileMenu" class="hidden md:hidden border-t border-gray-100">
+            <div class="container mx-auto px-4 py-3 space-y-2">
+                <a href="#calculator" class="block py-3 nav-link">
+                    <i class="fas fa-calculator mr-2"></i>Calculator
+                </a>
+                <a href="#history" class="block py-3 nav-link">
+                    <i class="fas fa-history mr-2"></i>Geschiedenis
+                </a>
+                <a href="#chart" class="block py-3 nav-link">
+                    <i class="fas fa-chart-line mr-2"></i>Statistieken
+                </a>
             </div>
         </div>
     </nav>
@@ -70,99 +86,95 @@
     <!-- Main Content -->
     <main id="app" class="container mx-auto px-4 py-8">
         <!-- Calculator Section -->
-        <section id="calculator" class="bg-white dark:bg-gray-800 rounded-xl shadow-md p-6 mb-8">
-            <h1 class="text-2xl font-bold mb-6 flex items-center">
-                <i class="fas fa-calculator mr-3 text-blue-500"></i>
-                Brandstofkosten Calculator
+        <section id="calculator" class="modern-card mb-8 animate-fade-in">
+            <h1 class="text-3xl font-bold mb-8 flex items-center">
+                <div class="w-14 h-14 bg-gradient-to-br from-blue-500 to-purple-600 rounded-2xl flex items-center justify-center mr-4 shadow-lg">
+                    <i class="fas fa-calculator text-xl text-white"></i>
+                </div>
+                <span class="text-gradient">Brandstofkosten Calculator</span>
             </h1>
             
             <div class="grid md:grid-cols-2 gap-6">
                 <!-- Departure Input -->
                 <div class="relative">
-                    <label class="block text-sm font-medium mb-2">Vertrekpunt</label>
+                    <label>Vertrekpunt</label>
                     <div class="relative">
-                        <input 
-                            type="text" 
+                        <input
+                            type="text"
                             v-model="departure"
                             @input="searchDeparture"
                             @focus="departureFocused = true"
                             @blur="handleDepartureBlur"
                             placeholder="Straat, stad of postcode..."
-                            class="w-full px-4 py-3 pr-10 border rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500 dark:bg-gray-700 dark:border-gray-600"
                             required
                         >
-                        <i class="fas fa-map-marker-alt absolute right-3 top-3.5 text-gray-400"></i>
+                        <i class="fas fa-map-marker-alt absolute right-4 top-4 text-gray-400"></i>
                     </div>
-                    
+
                     <!-- Departure Suggestions -->
-                    <div v-if="departureSuggestions.length > 0 && departureFocused" 
-                         class="absolute z-10 w-full mt-1 bg-white dark:bg-gray-700 border dark:border-gray-600 rounded-lg shadow-lg max-h-60 overflow-y-auto">
-                        <div v-for="(suggestion, index) in departureSuggestions" 
+                    <div v-if="departureSuggestions.length > 0 && departureFocused"
+                         class="autocomplete-dropdown">
+                        <div v-for="(suggestion, index) in departureSuggestions"
                              :key="index"
                              @click="selectDeparture(suggestion)"
-                             class="px-4 py-3 hover:bg-gray-100 dark:hover:bg-gray-600 cursor-pointer border-b dark:border-gray-600 last:border-b-0">
-                            <div class="font-medium">{{ suggestion.name }}</div>
-                            <div class="text-sm text-gray-500 dark:text-gray-400">{{ suggestion.display_name }}</div>
+                             class="autocomplete-item">
+                            <div class="font-semibold text-gray-900">{{ suggestion.name }}</div>
+                            <div class="text-sm text-gray-500">{{ suggestion.display_name }}</div>
                         </div>
                     </div>
                 </div>
-                
+
                 <!-- Destination Input -->
                 <div class="relative">
-                    <label class="block text-sm font-medium mb-2">Bestemming</label>
+                    <label>Bestemming</label>
                     <div class="relative">
-                        <input 
-                            type="text" 
+                        <input
+                            type="text"
                             v-model="destination"
                             @input="searchDestination"
                             @focus="destinationFocused = true"
                             @blur="handleDestinationBlur"
                             placeholder="Straat, stad of postcode..."
-                            class="w-full px-4 py-3 pr-10 border rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500 dark:bg-gray-700 dark:border-gray-600"
                             required
                         >
-                        <i class="fas fa-map-marker-alt absolute right-3 top-3.5 text-gray-400"></i>
+                        <i class="fas fa-map-marker-alt absolute right-4 top-4 text-gray-400"></i>
                     </div>
-                    
+
                     <!-- Destination Suggestions -->
-                    <div v-if="destinationSuggestions.length > 0 && destinationFocused" 
-                         class="absolute z-10 w-full mt-1 bg-white dark:bg-gray-700 border dark:border-gray-600 rounded-lg shadow-lg max-h-60 overflow-y-auto">
-                        <div v-for="(suggestion, index) in destinationSuggestions" 
+                    <div v-if="destinationSuggestions.length > 0 && destinationFocused"
+                         class="autocomplete-dropdown">
+                        <div v-for="(suggestion, index) in destinationSuggestions"
                              :key="index"
                              @click="selectDestination(suggestion)"
-                             class="px-4 py-3 hover:bg-gray-100 dark:hover:bg-gray-600 cursor-pointer border-b dark:border-gray-600 last:border-b-0">
-                            <div class="font-medium">{{ suggestion.name }}</div>
-                            <div class="text-sm text-gray-500 dark:text-gray-400">{{ suggestion.display_name }}</div>
+                             class="autocomplete-item">
+                            <div class="font-semibold text-gray-900">{{ suggestion.name }}</div>
+                            <div class="text-sm text-gray-500">{{ suggestion.display_name }}</div>
                         </div>
                     </div>
                 </div>
                 
                 <!-- Fuel Consumption Input -->
                 <div>
-                    <label class="block text-sm font-medium mb-2">Brandstofverbruik (L/100km)</label>
+                    <label>Brandstofverbruik (L/100km)</label>
                     <div class="relative">
-                        <input 
-                            type="number" 
+                        <input
+                            type="number"
                             v-model.number="consumption"
                             min="2"
                             max="25"
                             step="0.1"
                             placeholder="Bijv. 6.5"
-                            class="w-full px-4 py-3 pr-10 border rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500 dark:bg-gray-700 dark:border-gray-600"
                             required
                         >
-                        <i class="fas fa-gas-pump absolute right-3 top-3.5 text-gray-400"></i>
+                        <i class="fas fa-gas-pump absolute right-4 top-4 text-gray-400"></i>
                     </div>
-                    <p class="text-xs text-gray-500 mt-1">Gemiddeld: 5-8 L/100km</p>
+                    <p class="text-xs text-gray-500 mt-2">Gemiddeld: 5-8 L/100km</p>
                 </div>
-                
+
                 <!-- Fuel Type Select -->
                 <div>
-                    <label class="block text-sm font-medium mb-2">Brandstoftype</label>
-                    <select
-                        v-model="fuelType"
-                        class="w-full px-4 py-3 border rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500 dark:bg-gray-700 dark:border-gray-600"
-                    >
+                    <label>Brandstoftype</label>
+                    <select v-model="fuelType">
                         <option value="euro95">Euro 95 (E10)</option>
                         <option value="euro98">Euro 98 (E5)</option>
                         <option value="diesel">Diesel (B7)</option>
@@ -172,11 +184,8 @@
 
                 <!-- Gas Station Select -->
                 <div>
-                    <label class="block text-sm font-medium mb-2">Tankstation</label>
-                    <select
-                        v-model="gasStation"
-                        class="w-full px-4 py-3 border rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500 dark:bg-gray-700 dark:border-gray-600"
-                    >
+                    <label>Tankstation</label>
+                    <select v-model="gasStation">
                         <option value="average">Gemiddelde prijs</option>
                         <option value="shell">Shell</option>
                         <option value="totalenergies">TotalEnergies</option>
@@ -212,23 +221,25 @@
             </div>
             
             <!-- Fuel Price Display -->
-            <div v-if="currentFuelPrice" class="mt-4 p-4 bg-blue-50 dark:bg-blue-900/20 rounded-lg">
-                <div class="flex items-center justify-between">
+            <div v-if="currentFuelPrice" class="mt-6 price-display animate-fade-in">
+                <div class="flex items-center justify-between relative z-10">
                     <div class="flex-1">
-                        <div class="flex items-center">
-                            <span class="text-sm font-medium">Huidige brandstofprijs</span>
-                            <span v-if="gasStation !== 'average'" class="text-xs text-gray-600 dark:text-gray-400 ml-1">({{ getStationName(gasStation) }})</span>
-                            <span class="text-sm font-medium">:</span>
+                        <div class="flex items-center mb-2">
+                            <i class="fas fa-gas-pump mr-3 text-2xl opacity-90"></i>
+                            <div>
+                                <div class="text-sm font-medium opacity-90">Huidige Brandstofprijs</div>
+                                <div v-if="gasStation !== 'average'" class="text-xs opacity-75">{{ getStationName(gasStation) }}</div>
+                            </div>
                         </div>
-                        <span class="font-bold text-lg">€ {{ currentFuelPrice.toFixed(3) }}/L</span>
+                        <div class="price-value">€ {{ currentFuelPrice.toFixed(3) }}<span class="text-2xl opacity-75">/L</span></div>
                     </div>
                     <button
                         @click="refreshFuelPrice"
                         :disabled="isRefreshingPrice"
-                        class="px-3 py-1.5 bg-blue-500 hover:bg-blue-600 disabled:bg-gray-300 dark:disabled:bg-gray-600 text-white text-sm rounded-lg transition-colors flex items-center"
+                        class="bg-white/20 hover:bg-white/30 backdrop-blur-sm text-white px-4 py-2 rounded-xl transition-all flex items-center font-medium shadow-lg hover:shadow-xl disabled:opacity-50 disabled:cursor-not-allowed"
                         title="Ververs brandstofprijs"
                     >
-                        <i class="fas fa-sync-alt mr-1.5" :class="{ 'animate-spin': isRefreshingPrice }"></i>
+                        <i class="fas fa-sync-alt mr-2" :class="{ 'animate-spin': isRefreshingPrice }"></i>
                         <span v-if="!isRefreshingPrice">Ververs</span>
                         <span v-else>Laden...</span>
                     </button>
@@ -244,16 +255,16 @@
                 </div>
             </div>
             
-            <!-- Calculate Button -->
-            <button 
+            <!-- Calculate Button - Modern -->
+            <button
                 @click="calculateTrip"
                 :disabled="isCalculating || !departure || !destination || !consumption"
-                class="w-full mt-6 py-3 bg-blue-500 hover:bg-blue-600 disabled:bg-gray-300 dark:disabled:bg-gray-600 text-white font-medium rounded-lg transition-colors flex items-center justify-center"
+                class="w-full mt-8 py-4 btn-primary flex items-center justify-center text-lg hover-lift"
             >
-                <i class="fas fa-route mr-2" v-if="!isCalculating"></i>
+                <i class="fas fa-route mr-3 text-xl" v-if="!isCalculating"></i>
                 <span v-if="!isCalculating">Bereken Route & Kosten</span>
                 <span v-else class="flex items-center">
-                    <svg class="animate-spin h-5 w-5 mr-3" viewBox="0 0 24 24">
+                    <svg class="animate-spin h-6 w-6 mr-3" viewBox="0 0 24 24">
                         <circle class="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" stroke-width="4" fill="none"></circle>
                         <path class="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"></path>
                     </svg>
@@ -262,86 +273,109 @@
             </button>
         </section>
         
-        <!-- Result Section -->
-        <section v-if="result" class="bg-white dark:bg-gray-800 rounded-xl shadow-md p-6 mb-8 animate-fade-in">
-            <h2 class="text-xl font-bold mb-4 flex items-center">
-                <i class="fas fa-poll mr-3 text-green-500"></i>
-                Resultaten
+        <!-- Result Section - Ultra Modern -->
+        <section v-if="result" class="modern-card mb-8 animate-fade-in">
+            <h2 class="text-2xl font-bold mb-6 flex items-center">
+                <div class="w-12 h-12 bg-gradient-to-br from-green-500 to-emerald-600 rounded-2xl flex items-center justify-center mr-3 shadow-lg">
+                    <i class="fas fa-poll text-lg text-white"></i>
+                </div>
+                <span class="text-gradient">Route Resultaten</span>
             </h2>
-            
-            <div class="grid md:grid-cols-4 gap-4">
-                <div class="bg-gray-50 dark:bg-gray-700 rounded-lg p-4 text-center">
-                    <i class="fas fa-road text-2xl text-blue-500 mb-2"></i>
-                    <p class="text-sm text-gray-600 dark:text-gray-400">Afstand</p>
-                    <p class="text-2xl font-bold">{{ result.distance }} km</p>
+
+            <div class="grid md:grid-cols-4 gap-4 mb-8">
+                <div class="stat-card hover-lift">
+                    <i class="fas fa-road"></i>
+                    <div class="stat-label">Afstand</div>
+                    <div class="stat-value">{{ result.distance }} <span class="text-xl">km</span></div>
                 </div>
-                
-                <div class="bg-gray-50 dark:bg-gray-700 rounded-lg p-4 text-center">
-                    <i class="fas fa-clock text-2xl text-purple-500 mb-2"></i>
-                    <p class="text-sm text-gray-600 dark:text-gray-400">Reistijd</p>
-                    <p class="text-2xl font-bold">{{ formatDuration(result.duration) }}</p>
+
+                <div class="stat-card hover-lift" style="background: linear-gradient(135deg, #f093fb 0%, #f5576c 100%)">
+                    <i class="fas fa-clock"></i>
+                    <div class="stat-label">Reistijd</div>
+                    <div class="stat-value">{{ formatDuration(result.duration) }}</div>
                 </div>
-                
-                <div class="bg-gray-50 dark:bg-gray-700 rounded-lg p-4 text-center">
-                    <i class="fas fa-euro-sign text-2xl text-green-500 mb-2"></i>
-                    <p class="text-sm text-gray-600 dark:text-gray-400">Kosten</p>
-                    <p class="text-2xl font-bold">€ {{ result.cost }}</p>
+
+                <div class="stat-card hover-lift" style="background: linear-gradient(135deg, #4facfe 0%, #00f2fe 100%)">
+                    <i class="fas fa-euro-sign"></i>
+                    <div class="stat-label">Kosten</div>
+                    <div class="stat-value">€ {{ result.cost }}</div>
                 </div>
-                
-                <div class="bg-gray-50 dark:bg-gray-700 rounded-lg p-4 text-center">
-                    <i class="fas fa-leaf text-2xl text-green-600 mb-2"></i>
-                    <p class="text-sm text-gray-600 dark:text-gray-400">CO₂ Uitstoot</p>
-                    <p class="text-2xl font-bold">{{ result.co2 }} kg</p>
+
+                <div class="stat-card hover-lift" style="background: linear-gradient(135deg, #43e97b 0%, #38f9d7 100%)">
+                    <i class="fas fa-leaf"></i>
+                    <div class="stat-label">CO₂ Uitstoot</div>
+                    <div class="stat-value">{{ result.co2 }} <span class="text-xl">kg</span></div>
                 </div>
             </div>
-            
+
             <!-- Map -->
-            <div id="map" class="mt-6 h-96 rounded-lg overflow-hidden"></div>
+            <div id="map" class="h-96"></div>
         </section>
         
-        <!-- History Section -->
-        <section id="history" class="bg-white dark:bg-gray-800 rounded-xl shadow-md p-6 mb-8">
-            <div class="flex justify-between items-center mb-4">
-                <h2 class="text-xl font-bold flex items-center">
-                    <i class="fas fa-history mr-3 text-orange-500"></i>
-                    Geschiedenis
+        <!-- History Section - Modern -->
+        <section id="history" class="modern-card mb-8">
+            <div class="flex justify-between items-center mb-6">
+                <h2 class="text-2xl font-bold flex items-center">
+                    <div class="w-12 h-12 bg-gradient-to-br from-orange-500 to-pink-600 rounded-2xl flex items-center justify-center mr-3 shadow-lg">
+                        <i class="fas fa-history text-lg text-white"></i>
+                    </div>
+                    <span class="text-gradient">Ritgeschiedenis</span>
                 </h2>
-                <button 
+                <button
                     v-if="history.length > 0"
                     @click="exportHistory"
-                    class="px-4 py-2 bg-gray-100 dark:bg-gray-700 hover:bg-gray-200 dark:hover:bg-gray-600 rounded-lg text-sm transition-colors"
+                    class="btn-secondary hover-lift flex items-center"
                 >
                     <i class="fas fa-download mr-2"></i>
                     Exporteer CSV
                 </button>
             </div>
-            
-            <div v-if="history.length === 0" class="text-center py-8 text-gray-500 dark:text-gray-400">
-                <i class="fas fa-inbox text-4xl mb-3"></i>
-                <p>Nog geen ritten berekend</p>
+
+            <div v-if="history.length === 0" class="text-center py-16 text-gray-400">
+                <div class="w-24 h-24 bg-gray-100 rounded-full flex items-center justify-center mx-auto mb-4">
+                    <i class="fas fa-inbox text-5xl text-gray-300"></i>
+                </div>
+                <p class="text-lg font-medium">Nog geen ritten berekend</p>
+                <p class="text-sm mt-2">Start door een route te berekenen</p>
             </div>
-            
+
             <div v-else class="space-y-3">
-                <div v-for="(trip, index) in reversedHistory" 
+                <div v-for="(trip, index) in reversedHistory"
                      :key="index"
-                     class="bg-gray-50 dark:bg-gray-700 rounded-lg p-4 hover:shadow-md transition-shadow">
+                     class="history-item">
                     <div class="flex justify-between items-start">
                         <div class="flex-1">
-                            <div class="font-medium mb-1">
-                                <i class="fas fa-map-marker-alt text-blue-500 mr-1"></i>
+                            <div class="font-semibold text-lg mb-2 flex items-center">
+                                <i class="fas fa-route text-blue-500 mr-2"></i>
                                 {{ trip.departure }} → {{ trip.destination }}
                             </div>
-                            <div class="text-sm text-gray-600 dark:text-gray-400 space-x-4">
-                                <span><i class="fas fa-road mr-1"></i>{{ trip.distance }} km</span>
-                                <span><i class="fas fa-euro-sign mr-1"></i>{{ trip.cost }}</span>
-                                <span><i class="fas fa-gas-pump mr-1"></i>{{ getFuelTypeName(trip.fuelType) }}</span>
-                                <span v-if="trip.gasStation"><i class="fas fa-building mr-1"></i>{{ getStationName(trip.gasStation) }}</span>
-                                <span><i class="fas fa-calendar mr-1"></i>{{ formatDate(trip.date) }}</span>
+                            <div class="flex flex-wrap gap-3 text-sm text-gray-600">
+                                <span class="flex items-center">
+                                    <i class="fas fa-road mr-1.5 text-purple-500"></i>
+                                    <strong>{{ trip.distance }} km</strong>
+                                </span>
+                                <span class="flex items-center">
+                                    <i class="fas fa-euro-sign mr-1.5 text-green-500"></i>
+                                    <strong>€ {{ trip.cost }}</strong>
+                                </span>
+                                <span class="flex items-center">
+                                    <i class="fas fa-gas-pump mr-1.5 text-blue-500"></i>
+                                    {{ getFuelTypeName(trip.fuelType) }}
+                                </span>
+                                <span v-if="trip.gasStation" class="flex items-center">
+                                    <i class="fas fa-building mr-1.5 text-orange-500"></i>
+                                    {{ getStationName(trip.gasStation) }}
+                                </span>
+                                <span class="flex items-center">
+                                    <i class="fas fa-calendar mr-1.5 text-gray-400"></i>
+                                    {{ formatDate(trip.date) }}
+                                </span>
                             </div>
                         </div>
-                        <button 
+                        <button
                             @click="deleteTrip(index)"
-                            class="ml-4 text-red-500 hover:text-red-700 transition-colors"
+                            class="ml-4 w-10 h-10 flex items-center justify-center rounded-lg bg-red-50 text-red-500 hover:bg-red-100 hover:text-red-600 transition-all"
+                            title="Verwijder rit"
                         >
                             <i class="fas fa-trash"></i>
                         </button>
@@ -350,51 +384,77 @@
             </div>
         </section>
         
-        <!-- Chart Section -->
-        <section id="chart" class="bg-white dark:bg-gray-800 rounded-xl shadow-md p-6">
-            <h2 class="text-xl font-bold mb-4 flex items-center">
-                <i class="fas fa-chart-line mr-3 text-purple-500"></i>
-                Statistieken
+        <!-- Chart Section - Modern -->
+        <section id="chart" class="modern-card">
+            <h2 class="text-2xl font-bold mb-6 flex items-center">
+                <div class="w-12 h-12 bg-gradient-to-br from-purple-500 to-indigo-600 rounded-2xl flex items-center justify-center mr-3 shadow-lg">
+                    <i class="fas fa-chart-line text-lg text-white"></i>
+                </div>
+                <span class="text-gradient">Statistieken & Analyses</span>
             </h2>
-            
-            <div v-if="history.length === 0" class="text-center py-8 text-gray-500 dark:text-gray-400">
-                <i class="fas fa-chart-area text-4xl mb-3"></i>
-                <p>Nog geen data beschikbaar</p>
+
+            <div v-if="history.length === 0" class="text-center py-16 text-gray-400">
+                <div class="w-24 h-24 bg-gray-100 rounded-full flex items-center justify-center mx-auto mb-4">
+                    <i class="fas fa-chart-area text-5xl text-gray-300"></i>
+                </div>
+                <p class="text-lg font-medium">Nog geen data beschikbaar</p>
+                <p class="text-sm mt-2">Bereken enkele ritten om statistieken te zien</p>
             </div>
-            
+
             <div v-else>
-                <canvas id="costChart" class="mb-6"></canvas>
-                
-                <div class="grid md:grid-cols-3 gap-4 mt-6">
-                    <div class="bg-gray-50 dark:bg-gray-700 rounded-lg p-4 text-center">
-                        <p class="text-sm text-gray-600 dark:text-gray-400">Totale Afstand</p>
-                        <p class="text-2xl font-bold">{{ totalDistance }} km</p>
+                <!-- Chart -->
+                <div class="bg-gradient-to-br from-gray-50 to-white border border-gray-100 rounded-2xl p-6 mb-6">
+                    <canvas id="costChart" style="max-height: 300px;"></canvas>
+                </div>
+
+                <!-- Summary Stats -->
+                <div class="grid md:grid-cols-3 gap-4">
+                    <div class="stat-card hover-lift" style="background: linear-gradient(135deg, #667eea 0%, #764ba2 100%)">
+                        <i class="fas fa-road"></i>
+                        <div class="stat-label">Totale Afstand</div>
+                        <div class="stat-value">{{ totalDistance }} <span class="text-xl">km</span></div>
                     </div>
-                    <div class="bg-gray-50 dark:bg-gray-700 rounded-lg p-4 text-center">
-                        <p class="text-sm text-gray-600 dark:text-gray-400">Totale Kosten</p>
-                        <p class="text-2xl font-bold">€ {{ totalCost }}</p>
+
+                    <div class="stat-card hover-lift" style="background: linear-gradient(135deg, #f093fb 0%, #f5576c 100%)">
+                        <i class="fas fa-euro-sign"></i>
+                        <div class="stat-label">Totale Kosten</div>
+                        <div class="stat-value">€ {{ totalCost }}</div>
                     </div>
-                    <div class="bg-gray-50 dark:bg-gray-700 rounded-lg p-4 text-center">
-                        <p class="text-sm text-gray-600 dark:text-gray-400">Gemiddelde Kosten/km</p>
-                        <p class="text-2xl font-bold">€ {{ avgCostPerKm }}</p>
+
+                    <div class="stat-card hover-lift" style="background: linear-gradient(135deg, #4facfe 0%, #00f2fe 100%)">
+                        <i class="fas fa-calculator"></i>
+                        <div class="stat-label">Gem. Kosten/km</div>
+                        <div class="stat-value">€ {{ avgCostPerKm }}</div>
                     </div>
                 </div>
             </div>
         </section>
     </main>
     
-    <!-- Footer -->
-    <footer class="bg-white dark:bg-gray-800 shadow-lg mt-8">
-        <div class="container mx-auto px-4 py-6">
-            <div class="text-center text-gray-600 dark:text-gray-400">
-                <p>&copy; 2025 FuelTracker. Alle rechten voorbehouden.</p>
-                <p class="text-sm mt-2">
-                    <a href="#" class="hover:text-blue-500 transition-colors">Privacy</a>
-                    <span class="mx-2">•</span>
-                    <a href="#" class="hover:text-blue-500 transition-colors">Voorwaarden</a>
-                    <span class="mx-2">•</span>
-                    <a href="#" class="hover:text-blue-500 transition-colors">Contact</a>
-                </p>
+    <!-- Footer - Modern -->
+    <footer class="bg-gradient-to-r from-gray-50 to-gray-100 border-t border-gray-200 mt-16">
+        <div class="container mx-auto px-4 py-8">
+            <div class="flex flex-col md:flex-row justify-between items-center">
+                <div class="flex items-center space-x-3 mb-4 md:mb-0">
+                    <div class="w-10 h-10 bg-gradient-to-br from-blue-500 to-purple-600 rounded-lg flex items-center justify-center shadow">
+                        <i class="fas fa-gas-pump text-white"></i>
+                    </div>
+                    <div>
+                        <div class="font-bold text-lg text-gradient">FuelTracker</div>
+                        <div class="text-xs text-gray-500">Slimme brandstofkosten calculator</div>
+                    </div>
+                </div>
+
+                <div class="text-center md:text-right">
+                    <p class="text-sm text-gray-600 mb-2">&copy; 2025 FuelTracker. Alle rechten voorbehouden.</p>
+                    <div class="flex items-center justify-center md:justify-end space-x-4 text-sm">
+                        <a href="#" class="text-gray-500 hover:text-blue-500 transition-colors font-medium">Privacy</a>
+                        <span class="text-gray-300">•</span>
+                        <a href="#" class="text-gray-500 hover:text-blue-500 transition-colors font-medium">Voorwaarden</a>
+                        <span class="text-gray-300">•</span>
+                        <a href="#" class="text-gray-500 hover:text-blue-500 transition-colors font-medium">Contact</a>
+                    </div>
+                </div>
             </div>
         </div>
     </footer>
