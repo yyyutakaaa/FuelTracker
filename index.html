@@ -97,90 +97,84 @@
             <div class="grid md:grid-cols-2 gap-6">
                 <!-- Departure Input -->
                 <div class="relative">
-                    <label class="block text-sm font-medium mb-2">Vertrekpunt</label>
+                    <label>Vertrekpunt</label>
                     <div class="relative">
-                        <input 
-                            type="text" 
+                        <input
+                            type="text"
                             v-model="departure"
                             @input="searchDeparture"
                             @focus="departureFocused = true"
                             @blur="handleDepartureBlur"
                             placeholder="Straat, stad of postcode..."
-                            class="w-full px-4 py-3 pr-10 border rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500 dark:bg-gray-700 dark:border-gray-600"
                             required
                         >
-                        <i class="fas fa-map-marker-alt absolute right-3 top-3.5 text-gray-400"></i>
+                        <i class="fas fa-map-marker-alt absolute right-4 top-4 text-gray-400"></i>
                     </div>
-                    
+
                     <!-- Departure Suggestions -->
-                    <div v-if="departureSuggestions.length > 0 && departureFocused" 
-                         class="absolute z-10 w-full mt-1 bg-white dark:bg-gray-700 border dark:border-gray-600 rounded-lg shadow-lg max-h-60 overflow-y-auto">
-                        <div v-for="(suggestion, index) in departureSuggestions" 
+                    <div v-if="departureSuggestions.length > 0 && departureFocused"
+                         class="autocomplete-dropdown">
+                        <div v-for="(suggestion, index) in departureSuggestions"
                              :key="index"
                              @click="selectDeparture(suggestion)"
-                             class="px-4 py-3 hover:bg-gray-100 dark:hover:bg-gray-600 cursor-pointer border-b dark:border-gray-600 last:border-b-0">
-                            <div class="font-medium">{{ suggestion.name }}</div>
-                            <div class="text-sm text-gray-500 dark:text-gray-400">{{ suggestion.display_name }}</div>
+                             class="autocomplete-item">
+                            <div class="font-semibold text-gray-900">{{ suggestion.name }}</div>
+                            <div class="text-sm text-gray-500">{{ suggestion.display_name }}</div>
                         </div>
                     </div>
                 </div>
-                
+
                 <!-- Destination Input -->
                 <div class="relative">
-                    <label class="block text-sm font-medium mb-2">Bestemming</label>
+                    <label>Bestemming</label>
                     <div class="relative">
-                        <input 
-                            type="text" 
+                        <input
+                            type="text"
                             v-model="destination"
                             @input="searchDestination"
                             @focus="destinationFocused = true"
                             @blur="handleDestinationBlur"
                             placeholder="Straat, stad of postcode..."
-                            class="w-full px-4 py-3 pr-10 border rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500 dark:bg-gray-700 dark:border-gray-600"
                             required
                         >
-                        <i class="fas fa-map-marker-alt absolute right-3 top-3.5 text-gray-400"></i>
+                        <i class="fas fa-map-marker-alt absolute right-4 top-4 text-gray-400"></i>
                     </div>
-                    
+
                     <!-- Destination Suggestions -->
-                    <div v-if="destinationSuggestions.length > 0 && destinationFocused" 
-                         class="absolute z-10 w-full mt-1 bg-white dark:bg-gray-700 border dark:border-gray-600 rounded-lg shadow-lg max-h-60 overflow-y-auto">
-                        <div v-for="(suggestion, index) in destinationSuggestions" 
+                    <div v-if="destinationSuggestions.length > 0 && destinationFocused"
+                         class="autocomplete-dropdown">
+                        <div v-for="(suggestion, index) in destinationSuggestions"
                              :key="index"
                              @click="selectDestination(suggestion)"
-                             class="px-4 py-3 hover:bg-gray-100 dark:hover:bg-gray-600 cursor-pointer border-b dark:border-gray-600 last:border-b-0">
-                            <div class="font-medium">{{ suggestion.name }}</div>
-                            <div class="text-sm text-gray-500 dark:text-gray-400">{{ suggestion.display_name }}</div>
+                             class="autocomplete-item">
+                            <div class="font-semibold text-gray-900">{{ suggestion.name }}</div>
+                            <div class="text-sm text-gray-500">{{ suggestion.display_name }}</div>
                         </div>
                     </div>
                 </div>
                 
                 <!-- Fuel Consumption Input -->
                 <div>
-                    <label class="block text-sm font-medium mb-2">Brandstofverbruik (L/100km)</label>
+                    <label>Brandstofverbruik (L/100km)</label>
                     <div class="relative">
-                        <input 
-                            type="number" 
+                        <input
+                            type="number"
                             v-model.number="consumption"
                             min="2"
                             max="25"
                             step="0.1"
                             placeholder="Bijv. 6.5"
-                            class="w-full px-4 py-3 pr-10 border rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500 dark:bg-gray-700 dark:border-gray-600"
                             required
                         >
-                        <i class="fas fa-gas-pump absolute right-3 top-3.5 text-gray-400"></i>
+                        <i class="fas fa-gas-pump absolute right-4 top-4 text-gray-400"></i>
                     </div>
-                    <p class="text-xs text-gray-500 mt-1">Gemiddeld: 5-8 L/100km</p>
+                    <p class="text-xs text-gray-500 mt-2">Gemiddeld: 5-8 L/100km</p>
                 </div>
-                
+
                 <!-- Fuel Type Select -->
                 <div>
-                    <label class="block text-sm font-medium mb-2">Brandstoftype</label>
-                    <select
-                        v-model="fuelType"
-                        class="w-full px-4 py-3 border rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500 dark:bg-gray-700 dark:border-gray-600"
-                    >
+                    <label>Brandstoftype</label>
+                    <select v-model="fuelType">
                         <option value="euro95">Euro 95 (E10)</option>
                         <option value="euro98">Euro 98 (E5)</option>
                         <option value="diesel">Diesel (B7)</option>
@@ -190,11 +184,8 @@
 
                 <!-- Gas Station Select -->
                 <div>
-                    <label class="block text-sm font-medium mb-2">Tankstation</label>
-                    <select
-                        v-model="gasStation"
-                        class="w-full px-4 py-3 border rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500 dark:bg-gray-700 dark:border-gray-600"
-                    >
+                    <label>Tankstation</label>
+                    <select v-model="gasStation">
                         <option value="average">Gemiddelde prijs</option>
                         <option value="shell">Shell</option>
                         <option value="totalenergies">TotalEnergies</option>
@@ -206,12 +197,12 @@
                         <option value="lukoil">Lukoil</option>
                         <option value="custom">Aangepaste prijs</option>
                     </select>
-                    <p class="text-xs text-gray-500 mt-1">Selecteer je voorkeur tankstation voor tracking</p>
+                    <p class="text-xs text-gray-500 mt-2">Selecteer je voorkeur tankstation voor tracking</p>
                 </div>
 
                 <!-- Custom Price Input -->
                 <div v-if="gasStation === 'custom'">
-                    <label class="block text-sm font-medium mb-2">Aangepaste brandstofprijs (€/L)</label>
+                    <label>Aangepaste brandstofprijs (€/L)</label>
                     <div class="relative">
                         <input
                             type="number"
@@ -220,12 +211,11 @@
                             max="5"
                             step="0.001"
                             placeholder="Bijv. 1.599"
-                            class="w-full px-4 py-3 pr-10 border rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500 dark:bg-gray-700 dark:border-gray-600"
                             required
                         >
-                        <i class="fas fa-euro-sign absolute right-3 top-3.5 text-gray-400"></i>
+                        <i class="fas fa-euro-sign absolute right-4 top-4 text-gray-400"></i>
                     </div>
-                    <p class="text-xs text-gray-500 mt-1">Vul de prijs in die je bij het tankstation zag</p>
+                    <p class="text-xs text-gray-500 mt-2">Vul de prijs in die je bij het tankstation zag</p>
                 </div>
             </div>
             
