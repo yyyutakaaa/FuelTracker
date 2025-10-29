@@ -10,11 +10,18 @@ class FuelPriceService {
         this.sources = [
             {
                 name: 'primary',
-                fetch: this.fetchPrimaryPrices.bind(this)
+                fetch: this.fetchPrimaryPrices.bind(this),
+                description: 'StatBel API (direct)'
+            },
+            {
+                name: 'secondary',
+                fetch: this.fetchSecondaryPrices.bind(this),
+                description: 'StatBel API (via proxy)'
             },
             {
                 name: 'fallback',
-                fetch: this.fetchFallbackPrices.bind(this)
+                fetch: this.fetchFallbackPrices.bind(this),
+                description: 'October 2025 averages'
             }
         ];
     }
@@ -24,7 +31,7 @@ class FuelPriceService {
         const cacheKey = `price_${fuelType}`;
         const cached = this.getFromCache(cacheKey);
         if (cached) {
-            console.log(`Using cached price for ${fuelType}: €${cached}`);
+            console.log(`Using cached price for ${fuelType}: €${cached.price}`);
             return cached;
         }
 
@@ -35,8 +42,13 @@ class FuelPriceService {
                 const price = await source.fetch(fuelType);
                 if (price && price > 0) {
                     console.log(`Got price from ${source.name}: €${price}`);
-                    this.setCache(cacheKey, price);
-                    return price;
+                    const priceData = {
+                        price: price,
+                        source: source.name,
+                        description: source.description || source.name
+                    };
+                    this.setCache(cacheKey, priceData);
+                    return priceData;
                 }
             } catch (error) {
                 console.warn(`Failed to fetch from ${source.name}:`, error);
@@ -52,11 +64,15 @@ class FuelPriceService {
             'lpg': 0.749
         };
 
-        return fallbackPrices[fuelType] || 1.70;
+        return {
+            price: fallbackPrices[fuelType] || 1.70,
+            source: 'hardcoded',
+            description: 'Emergency fallback'
+        };
     }
 
     async fetchPrimaryPrices(fuelType) {
-        // Belgian government StatBel API
+        // Belgian government StatBel API with CORS proxy for local development
         const fuelTypeMapping = {
             'euro95': 'Euro Super 95 E10 (€/L)',
             'euro98': 'Super Plus 98 E5 (€/L)',
@@ -65,34 +81,102 @@ class FuelPriceService {
         };
 
         const controller = new AbortController();
-        const timeoutId = setTimeout(() => controller.abort(), 5000);
+        const timeoutId = setTimeout(() => controller.abort(), 8000);
 
-        const response = await fetch(
-            'https://bestat.statbel.fgov.be/bestat/api/views/665e2960-bf86-4d64-b4a8-90f2d30ea892/result/JSON',
-            { signal: controller.signal }
-        );
+        try {
+            // Try direct API call first
+            const apiUrl = 'https://bestat.statbel.fgov.be/bestat/api/views/665e2960-bf86-4d64-b4a8-90f2d30ea892/result/JSON';
 
-        clearTimeout(timeoutId);
+            console.log('Fetching from StatBel API...');
+            const response = await fetch(apiUrl, {
+                signal: controller.signal,
+                mode: 'cors',
+                headers: {
+                    'Accept': 'application/json'
+                }
+            });
 
-        if (!response.ok) throw new Error('StatBel API failed');
+            clearTimeout(timeoutId);
 
-        const data = await response.json();
-        const mappedType = fuelTypeMapping[fuelType];
+            if (!response.ok) {
+                console.error('StatBel API response not OK:', response.status);
+                throw new Error('StatBel API failed');
+            }
 
-        // Get most recent price
-        const relevantData = data.facts
-            .filter(item => item['Product'] === mappedType && item['Price incl. VAT'] !== null)
-            .sort((a, b) => new Date(b['Period'] || 0) - new Date(a['Period'] || 0));
+            const data = await response.json();
+            const mappedType = fuelTypeMapping[fuelType];
 
-        if (relevantData.length > 0) {
-            return parseFloat(relevantData[0]['Price incl. VAT']);
+            console.log('StatBel API data received, looking for:', mappedType);
+
+            // Get most recent price
+            const relevantData = data.facts
+                .filter(item => item['Product'] === mappedType && item['Price incl. VAT'] !== null)
+                .sort((a, b) => new Date(b['Period'] || 0) - new Date(a['Period'] || 0));
+
+            if (relevantData.length > 0) {
+                const price = parseFloat(relevantData[0]['Price incl. VAT']);
+                console.log(`✓ StatBel API success: €${price} for ${fuelType}`);
+                return price;
+            }
+
+            throw new Error('No data found in StatBel');
+        } catch (error) {
+            clearTimeout(timeoutId);
+            console.error('StatBel API error:', error.message);
+
+            // If CORS error, log specific message
+            if (error.name === 'TypeError' && error.message.includes('fetch')) {
+                console.warn('⚠ CORS error detected - falling back to alternative source');
+            }
+
+            throw error;
         }
+    }
 
-        throw new Error('No data found in StatBel');
+    async fetchSecondaryPrices(fuelType) {
+        // Alternative: Use a CORS-friendly proxy for local development
+        console.log('Trying secondary source with CORS proxy...');
+
+        try {
+            const apiUrl = 'https://bestat.statbel.fgov.be/bestat/api/views/665e2960-bf86-4d64-b4a8-90f2d30ea892/result/JSON';
+            const proxyUrl = 'https://api.allorigins.win/raw?url=';
+
+            const response = await fetch(proxyUrl + encodeURIComponent(apiUrl), {
+                timeout: 8000
+            });
+
+            if (!response.ok) throw new Error('Proxy API failed');
+
+            const data = await response.json();
+
+            const fuelTypeMapping = {
+                'euro95': 'Euro Super 95 E10 (€/L)',
+                'euro98': 'Super Plus 98 E5 (€/L)',
+                'diesel': 'Road Diesel B7 (€/L)',
+                'lpg': 'LPG (€/L)'
+            };
+
+            const mappedType = fuelTypeMapping[fuelType];
+            const relevantData = data.facts
+                .filter(item => item['Product'] === mappedType && item['Price incl. VAT'] !== null)
+                .sort((a, b) => new Date(b['Period'] || 0) - new Date(a['Period'] || 0));
+
+            if (relevantData.length > 0) {
+                const price = parseFloat(relevantData[0]['Price incl. VAT']);
+                console.log(`✓ Proxy API success: €${price} for ${fuelType}`);
+                return price;
+            }
+
+            throw new Error('No data in proxy response');
+        } catch (error) {
+            console.error('Secondary source error:', error.message);
+            throw error;
+        }
     }
 
     async fetchFallbackPrices(fuelType) {
-        // Fallback to hardcoded prices (October 2025 Belgian averages)
+        // Last resort: Use reliable fallback prices (October 2025 Belgian averages)
+        console.log('Using fallback prices (last resort)');
         const prices = {
             'euro95': 1.644,
             'euro98': 1.785,
@@ -128,24 +212,17 @@ class FuelPriceService {
         return cached ? new Date(cached.timestamp) : null;
     }
 
-    // Get price for station - returns base price from API without modifications
+    // Get price - returns base price from API
     getPriceForStation(basePrice, gasStation) {
-        // All stations show the same price from the API
-        // This ensures accurate pricing based on official Belgian data
+        // Always return the official average price from StatBel API
+        // Prices vary significantly by location, not by brand
+        // Without a real-time API per station, we use the official average
         return basePrice;
     }
 
     getStationName(stationCode) {
         const names = {
-            'average': 'Gemiddelde prijs',
-            'shell': 'Shell',
-            'totalenergies': 'TotalEnergies',
-            'q8': 'Q8',
-            'esso': 'Esso',
-            'gabriels': 'Gabriels',
-            'octaplus': 'Octa+',
-            'dats24': 'Dats 24',
-            'lukoil': 'Lukoil',
+            'average': 'Officiële gemiddelde',
             'custom': 'Aangepaste prijs'
         };
         return names[stationCode] || stationCode;
@@ -298,6 +375,7 @@ createApp({
             // Fuel prices
             currentFuelPrice: 1.70,
             lastPriceUpdate: 'Nu',
+            priceSource: 'Laden...',
             isRefreshingPrice: false,
 
             // Services
@@ -365,8 +443,8 @@ createApp({
     
     watch: {
         fuelType(newType) {
-            // Update price when fuel type changes
-            this.updateFuelPrice();
+            // Update price when fuel type changes - force refresh to get latest price
+            this.updateFuelPrice(true);
         },
         gasStation(newStation) {
             // Update price when gas station changes
@@ -388,6 +466,7 @@ createApp({
                 if (this.gasStation === 'custom' && this.customPrice && this.customPrice > 0) {
                     this.currentFuelPrice = this.customPrice;
                     this.lastPriceUpdate = 'Handmatig ingevoerd';
+                    this.priceSource = 'Aangepaste prijs';
                     return;
                 }
 
@@ -396,10 +475,15 @@ createApp({
                 }
 
                 // Get base price from API
-                const basePrice = await this.fuelService.getCurrentPrice(this.fuelType);
+                const priceData = await this.fuelService.getCurrentPrice(this.fuelType);
 
-                // Apply gas station modifier
+                // Extract price and source info
+                const basePrice = typeof priceData === 'object' ? priceData.price : priceData;
+                const source = priceData.description || 'Unknown';
+
+                // Use official average price
                 this.currentFuelPrice = this.fuelService.getPriceForStation(basePrice, this.gasStation);
+                this.priceSource = source;
 
                 const cacheTimestamp = this.fuelService.getCacheTimestamp(this.fuelType);
                 if (cacheTimestamp) {
@@ -407,8 +491,11 @@ createApp({
                 } else {
                     this.lastPriceUpdate = new Date().toLocaleString('nl-BE');
                 }
+
+                console.log(`Price updated: €${this.currentFuelPrice} from ${source} (base: €${basePrice})`);
             } catch (error) {
                 console.error('Error updating fuel price:', error);
+                this.priceSource = 'Error loading price';
             }
         },
 
@@ -447,17 +534,56 @@ createApp({
         
         async fetchSuggestions(query, type) {
             try {
-                const url = `https://nominatim.openstreetmap.org/search?format=json&q=${encodeURIComponent(query)}&countrycodes=be,nl&limit=5`;
-                const response = await fetch(url);
+                const url = `https://nominatim.openstreetmap.org/search?format=json&q=${encodeURIComponent(query)}&countrycodes=be,nl&limit=5&addressdetails=1`;
+                const response = await fetch(url, {
+                    headers: {
+                        'User-Agent': 'FuelTracker/1.0'
+                    }
+                });
                 const data = await response.json();
-                
-                const suggestions = data.map(item => ({
-                    name: item.name || item.display_name.split(',')[0],
-                    display_name: item.display_name,
-                    lat: parseFloat(item.lat),
-                    lon: parseFloat(item.lon)
-                }));
-                
+
+                const suggestions = data.map(item => {
+                    // Format the address for display
+                    let formattedAddress = '';
+
+                    // Check if this is a named location (POI, building, etc.)
+                    const hasSpecificName = item.name && item.type !== 'road' && item.type !== 'residential';
+
+                    if (hasSpecificName) {
+                        // Use the name for POIs (e.g., "Brussels Airport", "Grand Place")
+                        formattedAddress = item.name;
+                    } else if (item.address) {
+                        // Build address from components: street + house_number + city
+                        const parts = [];
+
+                        // Add street (road, street, or other street types)
+                        const street = item.address.road || item.address.street || item.address.pedestrian || item.address.footway;
+                        if (street) parts.push(street);
+
+                        // Add house number
+                        if (item.address.house_number) parts.push(item.address.house_number);
+
+                        // Add city (try different fields)
+                        const city = item.address.city || item.address.town || item.address.village || item.address.municipality;
+                        if (city) {
+                            formattedAddress = parts.join(' ') + (parts.length > 0 ? ', ' : '') + city;
+                        } else {
+                            formattedAddress = parts.join(' ') || item.display_name.split(',')[0];
+                        }
+                    } else {
+                        // Fallback to first part of display_name
+                        formattedAddress = item.display_name.split(',')[0];
+                    }
+
+                    return {
+                        name: item.name || item.display_name.split(',')[0],
+                        display_name: item.display_name,
+                        formatted_address: formattedAddress,
+                        lat: parseFloat(item.lat),
+                        lon: parseFloat(item.lon)
+                    };
+                });
+
                 if (type === 'departure') {
                     this.departureSuggestions = suggestions;
                 } else {
@@ -469,13 +595,13 @@ createApp({
         },
         
         selectDeparture(suggestion) {
-            this.departure = suggestion.name;
+            this.departure = suggestion.formatted_address;
             this.departureCoords = { lat: suggestion.lat, lon: suggestion.lon };
             this.departureSuggestions = [];
         },
-        
+
         selectDestination(suggestion) {
-            this.destination = suggestion.name;
+            this.destination = suggestion.formatted_address;
             this.destinationCoords = { lat: suggestion.lat, lon: suggestion.lon };
             this.destinationSuggestions = [];
         },
@@ -566,7 +692,11 @@ createApp({
         
         async geocodeAddress(address) {
             const url = `https://nominatim.openstreetmap.org/search?format=json&q=${encodeURIComponent(address)}&limit=1`;
-            const response = await fetch(url);
+            const response = await fetch(url, {
+                headers: {
+                    'User-Agent': 'FuelTracker/1.0'
+                }
+            });
             const data = await response.json();
             
             if (data && data.length > 0) {
@@ -597,18 +727,40 @@ createApp({
         },
         
         exportHistory() {
+            // Helper function to escape CSV fields
+            const escapeCsvField = (field) => {
+                if (field == null) return '';
+                const str = String(field);
+                // If field contains comma, quote, or newline, wrap in quotes and escape quotes
+                if (str.includes(',') || str.includes('"') || str.includes('\n')) {
+                    return `"${str.replace(/"/g, '""')}"`;
+                }
+                return str;
+            };
+
             let csv = 'Datum,Vertrek,Bestemming,Afstand,Kosten,Brandstof,Tankstation,Prijs\n';
             this.history.forEach(trip => {
                 const stationName = this.fuelService.getStationName(trip.gasStation || 'average');
-                csv += `${new Date(trip.date).toLocaleDateString()},${trip.departure},${trip.destination},${trip.distance},${trip.cost},${trip.fuelType},${stationName},${trip.fuelPrice || 'N/A'}\n`;
+                const row = [
+                    new Date(trip.date).toLocaleDateString('nl-BE'),
+                    escapeCsvField(trip.departure),
+                    escapeCsvField(trip.destination),
+                    trip.distance,
+                    trip.cost,
+                    this.getFuelTypeName(trip.fuelType),
+                    stationName,
+                    trip.fuelPrice || 'N/A'
+                ];
+                csv += row.join(',') + '\n';
             });
-            
-            const blob = new Blob([csv], { type: 'text/csv' });
+
+            const blob = new Blob([csv], { type: 'text/csv;charset=utf-8;' });
             const url = URL.createObjectURL(blob);
             const a = document.createElement('a');
             a.href = url;
-            a.download = 'fueltracker_export.csv';
+            a.download = `fueltracker_export_${new Date().toISOString().split('T')[0]}.csv`;
             a.click();
+            URL.revokeObjectURL(url);
         },
         
         formatDuration(minutes) {
@@ -637,12 +789,31 @@ createApp({
         
         setupThemeToggle() {
             const btn = document.getElementById('themeToggle');
+            const btnMobile = document.getElementById('themeToggleMobile');
             const html = document.documentElement;
-            
-            btn?.addEventListener('click', () => {
+
+            // Load saved theme from localStorage or use system preference
+            const savedTheme = localStorage.getItem('theme');
+            const systemPrefersDark = window.matchMedia('(prefers-color-scheme: dark)').matches;
+
+            // Apply theme on load
+            if (savedTheme === 'dark' || (!savedTheme && systemPrefersDark)) {
+                html.classList.add('dark');
+            } else {
+                html.classList.remove('dark');
+            }
+
+            // Toggle function
+            const toggleTheme = () => {
                 html.classList.toggle('dark');
-                localStorage.setItem('theme', html.classList.contains('dark') ? 'dark' : 'light');
-            });
+                const isDark = html.classList.contains('dark');
+                localStorage.setItem('theme', isDark ? 'dark' : 'light');
+                console.log('Theme switched to:', isDark ? 'dark' : 'light');
+            };
+
+            // Add event listeners to both buttons
+            btn?.addEventListener('click', toggleTheme);
+            btnMobile?.addEventListener('click', toggleTheme);
         },
         
         setupMobileMenu() {

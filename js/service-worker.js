@@ -1,22 +1,14 @@
 // FuelTracker - Service Worker
 
-const CACHE_NAME = 'fueltracker-v1.0';
+const CACHE_NAME = 'fueltracker-v1.0.0';
 const urlsToCache = [
     '/',
     '/index.html',
     '/css/style.css',
     '/js/app.js',
-    '/js/api.js',
-    '/js/map.js',
-    '/js/chart.js',
-    '/js/storage.js',
     '/manifest.json',
-    'https://unpkg.com/vue@3/dist/vue.global.prod.js',
-    'https://unpkg.com/leaflet@1.9.4/dist/leaflet.css',
-    'https://unpkg.com/leaflet@1.9.4/dist/leaflet.js',
-    'https://cdn.jsdelivr.net/npm/chart.js',
-    'https://cdn.tailwindcss.com',
-    'https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.1/css/all.min.css'
+    '/icon-192.png',
+    '/icon-512.png'
 ];
 
 // Install service worker

@@ -14,6 +14,11 @@
     
     <!-- Tailwind CSS -->
     <script src="https://cdn.tailwindcss.com"></script>
+    <script>
+        tailwind.config = {
+            darkMode: 'class'
+        }
+    </script>
     
     <!-- Leaflet -->
     <link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css" />
@@ -47,7 +52,8 @@
                     <a href="#history" class="nav-link">Geschiedenis</a>
                     <a href="#chart" class="nav-link">Statistieken</a>
                     <button id="themeToggle" class="p-2 rounded-lg hover:bg-gray-100 dark:hover:bg-gray-700 transition-colors">
-                        <i class="fas fa-moon dark:hidden"></i>
+                        <i class="fas fa-moon dark:hidden text-gray-700"></i>
+                        <i class="fas fa-sun hidden dark:block text-yellow-400"></i>
                     </button>
                 </div>
                 
@@ -63,6 +69,12 @@
                 <a href="#calculator" class="block py-2 nav-link">Calculator</a>
                 <a href="#history" class="block py-2 nav-link">Geschiedenis</a>
                 <a href="#chart" class="block py-2 nav-link">Statistieken</a>
+                <button id="themeToggleMobile" class="w-full text-left py-2 nav-link flex items-center gap-2">
+                    <i class="fas fa-moon dark:hidden text-gray-700"></i>
+                    <i class="fas fa-sun hidden dark:block text-yellow-400"></i>
+                    <span class="dark:hidden">Dark mode</span>
+                    <span class="hidden dark:block">Light mode</span>
+                </button>
             </div>
         </div>
     </nav>
@@ -95,14 +107,13 @@
                     </div>
                     
                     <!-- Departure Suggestions -->
-                    <div v-if="departureSuggestions.length > 0 && departureFocused" 
+                    <div v-if="departureSuggestions.length > 0 && departureFocused"
                          class="absolute z-10 w-full mt-1 bg-white dark:bg-gray-700 border dark:border-gray-600 rounded-lg shadow-lg max-h-60 overflow-y-auto">
-                        <div v-for="(suggestion, index) in departureSuggestions" 
+                        <div v-for="(suggestion, index) in departureSuggestions"
                              :key="index"
                              @click="selectDeparture(suggestion)"
                              class="px-4 py-3 hover:bg-gray-100 dark:hover:bg-gray-600 cursor-pointer border-b dark:border-gray-600 last:border-b-0">
-                            <div class="font-medium">{{ suggestion.name }}</div>
-                            <div class="text-sm text-gray-500 dark:text-gray-400">{{ suggestion.display_name }}</div>
+                            <div class="font-medium">{{ suggestion.formatted_address }}</div>
                         </div>
                     </div>
                 </div>
@@ -125,14 +136,13 @@
                     </div>
                     
                     <!-- Destination Suggestions -->
-                    <div v-if="destinationSuggestions.length > 0 && destinationFocused" 
+                    <div v-if="destinationSuggestions.length > 0 && destinationFocused"
                          class="absolute z-10 w-full mt-1 bg-white dark:bg-gray-700 border dark:border-gray-600 rounded-lg shadow-lg max-h-60 overflow-y-auto">
-                        <div v-for="(suggestion, index) in destinationSuggestions" 
+                        <div v-for="(suggestion, index) in destinationSuggestions"
                              :key="index"
                              @click="selectDestination(suggestion)"
                              class="px-4 py-3 hover:bg-gray-100 dark:hover:bg-gray-600 cursor-pointer border-b dark:border-gray-600 last:border-b-0">
-                            <div class="font-medium">{{ suggestion.name }}</div>
-                            <div class="text-sm text-gray-500 dark:text-gray-400">{{ suggestion.display_name }}</div>
+                            <div class="font-medium">{{ suggestion.formatted_address }}</div>
                         </div>
                     </div>
                 </div>
@@ -170,25 +180,20 @@
                     </select>
                 </div>
 
-                <!-- Gas Station Select -->
+                <!-- Price Source Select -->
                 <div>
-                    <label class="block text-sm font-medium mb-2">Tankstation</label>
+                    <label class="block text-sm font-medium mb-2">Prijsbron</label>
                     <select
                         v-model="gasStation"
                         class="w-full px-4 py-3 border rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500 dark:bg-gray-700 dark:border-gray-600"
                     >
-                        <option value="average">Gemiddelde prijs</option>
-                        <option value="shell">Shell</option>
-                        <option value="totalenergies">TotalEnergies</option>
-                        <option value="q8">Q8</option>
-                        <option value="esso">Esso</option>
-                        <option value="gabriels">Gabriels</option>
-                        <option value="octaplus">Octa+</option>
-                        <option value="dats24">Dats 24</option>
-                        <option value="lukoil">Lukoil</option>
-                        <option value="custom">Aangepaste prijs</option>
+                        <option value="average">Officiële gemiddelde prijs</option>
+                        <option value="custom">Aangepaste prijs invoeren</option>
                     </select>
-                    <p class="text-xs text-gray-500 mt-1">Selecteer je voorkeur tankstation voor tracking</p>
+                    <p class="text-xs text-gray-500 mt-1">
+                        <i class="fas fa-info-circle mr-1"></i>
+                        Gemiddelde prijs via StatBel API (Belgische overheid)
+                    </p>
                 </div>
 
                 <!-- Custom Price Input -->
@@ -215,12 +220,16 @@
             <div v-if="currentFuelPrice" class="mt-4 p-4 bg-blue-50 dark:bg-blue-900/20 rounded-lg">
                 <div class="flex items-center justify-between">
                     <div class="flex-1">
-                        <div class="flex items-center">
-                            <span class="text-sm font-medium">Huidige brandstofprijs</span>
-                            <span v-if="gasStation !== 'average'" class="text-xs text-gray-600 dark:text-gray-400 ml-1">({{ getStationName(gasStation) }})</span>
-                            <span class="text-sm font-medium">:</span>
+                        <div class="flex items-center gap-2">
+                            <span class="text-sm font-medium">
+                                <span v-if="gasStation === 'custom'">Aangepaste brandstofprijs</span>
+                                <span v-else>Officiële gemiddelde brandstofprijs</span>
+                            </span>
                         </div>
-                        <span class="font-bold text-lg">€ {{ currentFuelPrice.toFixed(3) }}/L</span>
+                        <div class="flex items-center gap-2 mt-1">
+                            <span class="font-bold text-2xl">{{ currentFuelPrice.toFixed(3) }}</span>
+                            <span class="text-gray-600 dark:text-gray-400">EUR/L</span>
+                        </div>
                     </div>
                     <button
                         @click="refreshFuelPrice"
@@ -237,10 +246,28 @@
                     <i class="fas fa-clock mr-1"></i>
                     Laatst bijgewerkt: {{ lastPriceUpdate }}
                 </div>
+                <div class="text-xs mt-1 flex items-center">
+                    <i class="fas fa-database mr-1" :class="{
+                        'text-green-500': priceSource.includes('StatBel'),
+                        'text-yellow-500': priceSource.includes('proxy'),
+                        'text-orange-500': priceSource.includes('averages') || priceSource.includes('fallback'),
+                        'text-blue-500': priceSource.includes('Aangepaste'),
+                        'text-gray-500': !priceSource.includes('StatBel') && !priceSource.includes('proxy') && !priceSource.includes('averages') && !priceSource.includes('Aangepaste')
+                    }"></i>
+                    <span class="text-xs" :class="{
+                        'text-green-600 dark:text-green-400': priceSource.includes('StatBel'),
+                        'text-yellow-600 dark:text-yellow-400': priceSource.includes('proxy'),
+                        'text-orange-600 dark:text-orange-400': priceSource.includes('averages') || priceSource.includes('fallback'),
+                        'text-blue-600 dark:text-blue-400': priceSource.includes('Aangepaste'),
+                        'text-gray-500 dark:text-gray-400': !priceSource.includes('StatBel') && !priceSource.includes('proxy') && !priceSource.includes('averages') && !priceSource.includes('Aangepaste')
+                    }">Bron: {{ priceSource }}</span>
+                </div>
                 <div class="text-xs text-gray-500 dark:text-gray-400 mt-1">
                     <i class="fas fa-info-circle mr-1"></i>
-                    <span v-if="gasStation === 'custom'">Aangepaste prijs ingevoerd</span>
-                    <span v-else>Officiële gemiddelde prijzen via StatBel API - Automatisch bijgewerkt elke 6 uur</span>
+                    <span v-if="gasStation === 'custom'">Handmatig ingevoerde prijs</span>
+                    <span v-else-if="priceSource.includes('StatBel') && !priceSource.includes('proxy')">Live data van Belgische overheid - Automatisch bijgewerkt elke 6 uur</span>
+                    <span v-else-if="priceSource.includes('proxy')">Via CORS proxy (lokale ontwikkeling) - Automatisch bijgewerkt elke 6 uur</span>
+                    <span v-else>Fallback prijzen - Klik op 'Ververs' om opnieuw te proberen</span>
                 </div>
             </div>
             

@@ -1,0 +1,12 @@
+{
+  "permissions": {
+    "allow": [
+      "WebFetch(domain:bestat.statbel.fgov.be)",
+      "WebSearch",
+      "WebFetch(domain:be.fuelo.net)",
+      "WebFetch(domain:carbu.com)"
+    ],
+    "deny": [],
+    "ask": []
+  }
+}
