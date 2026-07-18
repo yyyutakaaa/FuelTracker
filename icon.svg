@@ -1,0 +1,9 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 512 512" role="img" aria-labelledby="title description">
+  <title id="title">FuelTracker</title>
+  <desc id="description">Een witte brandstofpomp en route op een blauwe achtergrond</desc>
+  <rect width="512" height="512" rx="112" fill="#2563eb"/>
+  <path d="M137 98c-22 0-40 18-40 40v278h190V138c0-22-18-40-40-40H137Zm8 48h94v92h-94v-92Zm-68 270h230v34H77v-34Z" fill="#fff"/>
+  <path d="M286 155h27c19 0 34 15 34 34v166c0 20 16 36 36 36s36-16 36-36V240l-41-41 24-24 50 50v130c0 39-31 70-69 70s-70-31-70-70V194a5 5 0 0 0-5-5h-22v-34Z" fill="#fff"/>
+  <circle cx="190" cy="328" r="34" fill="#93c5fd"/>
+  <path d="M177 328h26m-13-13v26" stroke="#1d4ed8" stroke-width="12" stroke-linecap="round"/>
+</svg>

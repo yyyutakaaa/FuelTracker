@@ -1,104 +1,102 @@
-// FuelTracker - Service Worker
+// FuelTracker app-shell serviceworker. Route-, kaart- en prijsdata blijven netwerkafhankelijk.
 
-const CACHE_NAME = 'fueltracker-v1.0.0';
-const urlsToCache = [
-    '/',
-    '/index.html',
-    '/css/style.css',
-    '/js/app.js',
-    '/manifest.json',
-    '/icon-192.png',
-    '/icon-512.png'
+const CACHE_PREFIX = 'fueltracker-';
+const CACHE_VERSION = 'v2.0.0';
+const APP_CACHE = `${CACHE_PREFIX}app-${CACHE_VERSION}`;
+const RUNTIME_CACHE = `${CACHE_PREFIX}runtime-${CACHE_VERSION}`;
+const BUILD_ASSET_PATHS = /* __BUILD_ASSETS__ */ [];
+const APP_SHELL_PATHS = [
+    './',
+    './index.html',
+    './offline.html',
+    './css/style.css',
+    './css/tailwind.generated.css',
+    './manifest.json',
+    './icon.svg',
+    './privacy.html',
+    './voorwaarden.html',
+    './contact.html',
+    './vendor/vue.global.prod.js',
+    './vendor/leaflet/leaflet.css',
+    './vendor/leaflet/leaflet.js',
+    './vendor/chart.umd.js',
+    './vendor/fontawesome/css/all.min.css'
 ];
 
-// Install service worker
+const appUrl = path => new URL(path, self.registration.scope).href;
+const APP_SHELL_URLS = [...new Set([...APP_SHELL_PATHS, ...BUILD_ASSET_PATHS])].map(appUrl);
+const OFFLINE_URL = appUrl('./offline.html');
+const INDEX_URL = appUrl('./index.html');
+
 self.addEventListener('install', event => {
     event.waitUntil(
-        caches.open(CACHE_NAME)
-            .then(cache => {
-                console.log('Opened cache');
-                return cache.addAll(urlsToCache);
-            })
+        caches.open(APP_CACHE)
+            // One optioneel bestand mag de installatie van de offline shell niet blokkeren.
+            .then(cache => Promise.allSettled(APP_SHELL_URLS.map(url => cache.add(url))))
+            .then(() => self.skipWaiting())
     );
 });
 
-// Activate service worker
 self.addEventListener('activate', event => {
     event.waitUntil(
-        caches.keys().then(cacheNames => {
-            return Promise.all(
-                cacheNames.map(cacheName => {
-                    if (cacheName !== CACHE_NAME) {
-                        console.log('Deleting old cache:', cacheName);
-                        return caches.delete(cacheName);
-                    }
-                })
-            );
-        })
+        caches.keys()
+            .then(keys => Promise.all(
+                keys
+                    .filter(key => key.startsWith(CACHE_PREFIX) && ![APP_CACHE, RUNTIME_CACHE].includes(key))
+                    .map(key => caches.delete(key))
+            ))
+            .then(() => self.clients.claim())
     );
 });
 
-// Fetch event
 self.addEventListener('fetch', event => {
-    // Skip cross-origin requests
-    if (!event.request.url.startsWith(self.location.origin) && 
-        !event.request.url.includes('unpkg.com') &&
-        !event.request.url.includes('jsdelivr.net') &&
-        !event.request.url.includes('cdnjs.cloudflare.com') &&
-        !event.request.url.includes('tailwindcss.com')) {
+    const { request } = event;
+    if (request.method !== 'GET') return;
+
+    const url = new URL(request.url);
+
+    // Externe API- en kaarttegeldata worden nooit stilzwijgend als actueel gecachet.
+    if (url.origin !== self.location.origin) return;
+
+    if (request.mode === 'navigate') {
+        event.respondWith(networkFirstNavigation(request));
         return;
     }
-    
-    event.respondWith(
-        caches.match(event.request)
-            .then(response => {
-                // Cache hit - return response
-                if (response) {
-                    return response;
-                }
-                
-                // Clone the request
-                const fetchRequest = event.request.clone();
-                
-                return fetch(fetchRequest).then(response => {
-                    // Check if valid response
-                    if (!response || response.status !== 200 || response.type === 'opaque') {
-                        return response;
-                    }
-                    
-                    // Clone the response
-                    const responseToCache = response.clone();
-                    
-                    // Don't cache API calls
-                    if (!event.request.url.includes('nominatim') && 
-                        !event.request.url.includes('router.project-osrm') &&
-                        !event.request.url.includes('bestat.statbel')) {
-                        caches.open(CACHE_NAME)
-                            .then(cache => {
-                                cache.put(event.request, responseToCache);
-                            });
-                    }
-                    
-                    return response;
-                });
-            })
-            .catch(() => {
-                // Offline fallback
-                if (event.request.destination === 'document') {
-                    return caches.match('/index.html');
-                }
-            })
-    );
+
+    event.respondWith(staleWhileRevalidate(request));
 });
 
-// Background sync for offline calculations
-self.addEventListener('sync', event => {
-    if (event.tag === 'sync-calculations') {
-        event.waitUntil(syncCalculations());
+async function networkFirstNavigation(request) {
+    try {
+        const response = await fetch(request);
+        if (response.ok) {
+            const cache = await caches.open(RUNTIME_CACHE);
+            await cache.put(request, response.clone());
+        }
+        return response;
+    } catch {
+        return (await caches.match(request))
+            || (await caches.match(INDEX_URL))
+            || caches.match(OFFLINE_URL);
     }
-});
+}
 
-async function syncCalculations() {
-    // Future feature: sync offline calculations when back online
-    console.log('Syncing offline calculations...');
+async function staleWhileRevalidate(request) {
+    const cached = await caches.match(request);
+    const update = fetch(request)
+        .then(async response => {
+            if (response.ok && response.type === 'basic') {
+                const cache = await caches.open(RUNTIME_CACHE);
+                await cache.put(request, response.clone());
+            }
+            return response;
+        })
+        .catch(() => null);
+
+    if (cached) {
+        void update;
+        return cached;
+    }
+
+    return (await update) || Response.error();
 }

@@ -1,0 +1,86 @@
+:root {
+    color-scheme: light dark;
+    font-family: Inter, ui-sans-serif, system-ui, -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif;
+    line-height: 1.65;
+    color: #172033;
+    background: #f1f5f9;
+}
+
+* { box-sizing: border-box; }
+
+body {
+    margin: 0;
+    min-height: 100vh;
+    background: linear-gradient(145deg, #eff6ff 0%, #f8fafc 45%, #ecfeff 100%);
+}
+
+header, main, footer {
+    width: min(760px, calc(100% - 32px));
+    margin-inline: auto;
+}
+
+header {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    gap: 24px;
+    padding-block: 28px;
+}
+
+.brand {
+    color: #1d4ed8;
+    font-size: 1.2rem;
+    font-weight: 800;
+    text-decoration: none;
+}
+
+.back-link, main a { color: #1d4ed8; }
+
+main {
+    padding: clamp(24px, 6vw, 56px);
+    border: 1px solid #dbe4f0;
+    border-radius: 24px;
+    background: rgba(255, 255, 255, 0.92);
+    box-shadow: 0 24px 65px rgba(30, 64, 175, 0.1);
+}
+
+h1 {
+    margin: 0 0 8px;
+    font-size: clamp(2rem, 6vw, 3.25rem);
+    line-height: 1.08;
+    letter-spacing: -0.04em;
+}
+
+h2 { margin-top: 2rem; line-height: 1.25; }
+p, li { color: #475569; }
+.intro { font-size: 1.1rem; }
+.meta { color: #64748b; font-size: 0.9rem; }
+
+.callout {
+    margin-block: 24px;
+    padding: 18px 20px;
+    border-left: 4px solid #2563eb;
+    border-radius: 0 12px 12px 0;
+    background: #eff6ff;
+}
+
+.button {
+    display: inline-block;
+    padding: 12px 18px;
+    border-radius: 12px;
+    color: #fff;
+    background: #2563eb;
+    font-weight: 700;
+    text-decoration: none;
+}
+
+footer { padding-block: 28px 48px; color: #64748b; font-size: 0.9rem; text-align: center; }
+
+@media (prefers-color-scheme: dark) {
+    :root { color: #e2e8f0; background: #081120; }
+    body { background: linear-gradient(145deg, #0f172a, #111827); }
+    main { border-color: #273449; background: rgba(15, 23, 42, 0.94); }
+    p, li, .meta, footer { color: #aebed3; }
+    .brand, .back-link, main a { color: #93c5fd; }
+    .callout { background: #172554; }
+}

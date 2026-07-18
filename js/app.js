@@ -1,6 +1,33 @@
-// FuelTracker - Simplified App without module imports
+// FuelTracker application
+
+import { CO2_FACTORS_KG_PER_LITRE, calculateTripMetrics } from './calculations.js';
 
 const { createApp } = Vue;
+
+async function fetchWithTimeout(url, options = {}, timeoutMs = 10000) {
+    const controller = new AbortController();
+    const externalSignal = options.signal;
+    const timeoutId = setTimeout(() => controller.abort(), timeoutMs);
+    const abortFromExternalSignal = () => controller.abort();
+
+    if (externalSignal) {
+        if (externalSignal.aborted) controller.abort();
+        else externalSignal.addEventListener('abort', abortFromExternalSignal, { once: true });
+    }
+
+    try {
+        return await fetch(url, { ...options, signal: controller.signal });
+    } finally {
+        clearTimeout(timeoutId);
+        externalSignal?.removeEventListener('abort', abortFromExternalSignal);
+    }
+}
+
+function escapeHtml(value) {
+    const element = document.createElement('div');
+    element.textContent = String(value ?? '');
+    return element.innerHTML;
+}
 
 // Inline Services to avoid import issues
 class FuelPriceService {
@@ -232,6 +259,10 @@ class FuelPriceService {
 class StorageService {
     constructor() {
         this.storageKey = 'fueltracker_history';
+        this.profileKey = 'fueltracker_vehicle_profiles';
+        this.defaultsKey = 'fueltracker_vehicle_defaults';
+        this.favoritesKey = 'fueltracker_favorites';
+        this.recentsKey = 'fueltracker_recent_routes';
     }
     
     saveHistory(history) {
@@ -253,6 +284,26 @@ class StorageService {
             return [];
         }
     }
+
+    save(key, value) {
+        try {
+            localStorage.setItem(key, JSON.stringify(value));
+            return true;
+        } catch (error) {
+            console.error(`Error saving ${key}:`, error);
+            return false;
+        }
+    }
+
+    load(key, fallback = null) {
+        try {
+            const data = localStorage.getItem(key);
+            return data ? JSON.parse(data) : fallback;
+        } catch (error) {
+            console.error(`Error loading ${key}:`, error);
+            return fallback;
+        }
+    }
 }
 
 class MapService {
@@ -260,12 +311,23 @@ class MapService {
         this.map = null;
         this.routeLayer = null;
         this.markersLayer = null;
+        this.container = null;
     }
     
     initMap() {
-        if (!document.getElementById('map')) return;
+        const container = document.getElementById('map');
+        if (!container || typeof L === 'undefined') return false;
+
+        if (this.map && this.container === container) {
+            this.map.invalidateSize();
+            return true;
+        }
+
+        this.destroy();
+        if (container._leaflet_id) delete container._leaflet_id;
         
-        this.map = L.map('map', {
+        this.container = container;
+        this.map = L.map(container, {
             center: [50.8503, 4.3517],
             zoom: 8
         });
@@ -276,21 +338,22 @@ class MapService {
         
         this.routeLayer = L.layerGroup().addTo(this.map);
         this.markersLayer = L.layerGroup().addTo(this.map);
+        return true;
     }
     
     drawRoute(geometry, startCoords, endCoords, startName, endName) {
-        if (!this.map) return;
+        if (!this.map || !this.routeLayer || !this.markersLayer) return;
         
         this.routeLayer.clearLayers();
         this.markersLayer.clearLayers();
         
         // Add markers
         L.marker([startCoords.lat, startCoords.lon])
-            .bindPopup(`<strong>Vertrek:</strong><br>${startName}`)
+            .bindPopup(`<strong>Vertrek:</strong><br>${escapeHtml(startName)}`)
             .addTo(this.markersLayer);
         
         L.marker([endCoords.lat, endCoords.lon])
-            .bindPopup(`<strong>Bestemming:</strong><br>${endName}`)
+            .bindPopup(`<strong>Bestemming:</strong><br>${escapeHtml(endName)}`)
             .addTo(this.markersLayer);
         
         // Draw route
@@ -310,6 +373,14 @@ class MapService {
             this.map.fitBounds(bounds, { padding: [50, 50] });
         }
     }
+
+    destroy() {
+        if (this.map) this.map.remove();
+        this.map = null;
+        this.routeLayer = null;
+        this.markersLayer = null;
+        this.container = null;
+    }
 }
 
 class ChartService {
@@ -319,12 +390,14 @@ class ChartService {
     
     updateChart(history) {
         const ctx = document.getElementById('costChart');
-        if (!ctx || history.length === 0) return;
-        
-        if (this.chart) {
-            this.chart.destroy();
+        if (typeof Chart === 'undefined') return;
+        if (!ctx || history.length === 0) {
+            this.destroy();
+            return;
         }
         
+        this.destroy();
+
         const labels = history.map((trip, index) => `Rit ${index + 1}`);
         const costs = history.map(trip => parseFloat(trip.cost));
         
@@ -345,6 +418,11 @@ class ChartService {
             }
         });
     }
+
+    destroy() {
+        if (this.chart) this.chart.destroy();
+        this.chart = null;
+    }
 }
 
 // Vue App
@@ -358,6 +436,9 @@ createApp({
             fuelType: 'euro95',
             gasStation: 'average',
             customPrice: null,
+            vehicleName: '',
+            roundTrip: false,
+            passengers: 1,
             
             // Autocomplete
             departureSuggestions: [],
@@ -371,6 +452,12 @@ createApp({
             isCalculating: false,
             result: null,
             history: [],
+            vehicleProfiles: [],
+            favoriteRoutes: [],
+            recentRoutes: [],
+            appError: '',
+            toast: null,
+            deletedTrip: null,
             
             // Fuel prices
             currentFuelPrice: 1.70,
@@ -387,11 +474,18 @@ createApp({
             // Timers
             departureTimer: null,
             destinationTimer: null,
-            priceRefreshInterval: null
+            priceRefreshInterval: null,
+            toastTimer: null,
+            undoTimer: null,
+            departureRequestId: 0,
+            destinationRequestId: 0,
+            departureAbortController: null,
+            destinationAbortController: null,
+            priceRequestId: 0
         };
     },
     
-    async mounted() {
+    mounted() {
         console.log('App mounting...');
         
         // Initialize services
@@ -401,19 +495,42 @@ createApp({
         this.chartService = new ChartService();
         
         // Load history
-        this.history = this.storageService.loadHistory();
+        const storedHistory = this.storageService.loadHistory();
+        const storedProfiles = this.storageService.load(this.storageService.profileKey, []);
+        const storedFavorites = this.storageService.load(this.storageService.favoritesKey, []);
+        const storedRecents = this.storageService.load(this.storageService.recentsKey, []);
+        this.history = Array.isArray(storedHistory) ? storedHistory : [];
+        this.vehicleProfiles = Array.isArray(storedProfiles) ? storedProfiles : [];
+        this.favoriteRoutes = Array.isArray(storedFavorites) ? storedFavorites : [];
+        this.recentRoutes = Array.isArray(storedRecents) ? storedRecents : [];
+
+        const defaults = this.storageService.load(this.storageService.defaultsKey, null);
+        if (defaults) {
+            this.applyVehicleDefaults(defaults);
+        } else {
+            const legacySettings = this.storageService.load('fueltracker_settings', null);
+            if (legacySettings) {
+                this.applyVehicleDefaults({
+                    vehicleName: legacySettings.vehicleName || '',
+                    consumption: legacySettings.defaultConsumption ?? legacySettings.consumption,
+                    fuelType: legacySettings.defaultFuelType || legacySettings.fuelType
+                });
+            }
+        }
 
         // Get initial fuel price
-        await this.updateFuelPrice();
+        this.updateFuelPrice();
 
         // Setup automatic price refresh every 6 hours
         this.priceRefreshInterval = setInterval(() => {
             this.updateFuelPrice(true);
         }, 6 * 60 * 60 * 1000);
 
-        // Initialize map after DOM ready
+        // The map only exists after a result is rendered. The chart can be
+        // initialized immediately when persisted history is present.
         this.$nextTick(() => {
             this.mapService.initMap();
+            this.chartService.updateChart(this.history);
         });
         
         // Setup UI
@@ -421,7 +538,8 @@ createApp({
         this.setupMobileMenu();
         
         // Hide loading screen
-        document.getElementById('loadingScreen').style.display = 'none';
+        const loadingScreen = document.getElementById('loadingScreen');
+        if (loadingScreen) loadingScreen.style.display = 'none';
         
         console.log('App mounted successfully');
     },
@@ -438,6 +556,17 @@ createApp({
         },
         avgCostPerKm() {
             return this.totalDistance > 0 ? (this.totalCost / this.totalDistance).toFixed(3) : '0.00';
+        },
+        costPerPerson() {
+            return this.result?.costPerPerson || '0.00';
+        },
+        favorites() {
+            return this.favoriteRoutes;
+        },
+        appMessage() {
+            if (this.toast) return { text: this.toast.message, type: this.toast.type };
+            if (this.appError) return { text: this.appError, type: 'error' };
+            return null;
         }
     },
     
@@ -461,6 +590,7 @@ createApp({
     methods: {
         // Fuel price methods
         async updateFuelPrice(forceRefresh = false) {
+            const requestId = ++this.priceRequestId;
             try {
                 // If custom price is selected, use that
                 if (this.gasStation === 'custom' && this.customPrice && this.customPrice > 0) {
@@ -476,10 +606,11 @@ createApp({
 
                 // Get base price from API
                 const priceData = await this.fuelService.getCurrentPrice(this.fuelType);
+                if (requestId !== this.priceRequestId) return;
 
                 // Extract price and source info
                 const basePrice = typeof priceData === 'object' ? priceData.price : priceData;
-                const source = priceData.description || 'Unknown';
+                const source = typeof priceData === 'object' ? (priceData.description || 'Unknown') : 'Unknown';
 
                 // Use official average price
                 this.currentFuelPrice = this.fuelService.getPriceForStation(basePrice, this.gasStation);
@@ -495,7 +626,9 @@ createApp({
                 console.log(`Price updated: €${this.currentFuelPrice} from ${source} (base: €${basePrice})`);
             } catch (error) {
                 console.error('Error updating fuel price:', error);
+                if (requestId !== this.priceRequestId) return;
                 this.priceSource = 'Error loading price';
+                this.showError('De actuele brandstofprijs kon niet worden geladen. De laatst bekende prijs blijft actief.');
             }
         },
 
@@ -507,42 +640,103 @@ createApp({
                 await this.updateFuelPrice();
             } catch (error) {
                 console.error('Error refreshing price:', error);
-                alert('Fout bij het ophalen van de brandstofprijs');
+                this.showError('Fout bij het ophalen van de brandstofprijs.');
             } finally {
                 this.isRefreshingPrice = false;
             }
         },
 
+        showError(message) {
+            this.appError = String(message || 'Er is iets misgegaan.');
+            this.showToast(this.appError, 'error', 6000);
+        },
+
+        clearError() {
+            this.appError = '';
+        },
+
+        showToast(message, type = 'info', duration = 4000) {
+            if (this.toastTimer) clearTimeout(this.toastTimer);
+            this.toast = { message: String(message), type };
+            if (duration > 0) {
+                this.toastTimer = setTimeout(() => {
+                    this.toast = null;
+                    this.toastTimer = null;
+                }, duration);
+            }
+        },
+
+        dismissToast() {
+            if (this.toastTimer) clearTimeout(this.toastTimer);
+            this.toastTimer = null;
+            this.toast = null;
+        },
+
         // Autocomplete
         searchDeparture() {
+            // @input only fires for manual edits, not when selectDeparture sets
+            // the model. Any previously selected coordinates are now stale.
+            this.departureCoords = null;
+            this.clearError();
+            this.departureAbortController?.abort();
             clearTimeout(this.departureTimer);
+            const query = this.departure.trim();
+            if (query.length < 3) {
+                this.departureSuggestions = [];
+                return;
+            }
+            const requestId = ++this.departureRequestId;
             this.departureTimer = setTimeout(() => {
-                if (this.departure.length >= 3) {
-                    this.fetchSuggestions(this.departure, 'departure');
-                }
+                this.fetchSuggestions(query, 'departure', requestId);
             }, 300);
         },
         
         searchDestination() {
+            this.destinationCoords = null;
+            this.clearError();
+            this.destinationAbortController?.abort();
             clearTimeout(this.destinationTimer);
+            const query = this.destination.trim();
+            if (query.length < 3) {
+                this.destinationSuggestions = [];
+                return;
+            }
+            const requestId = ++this.destinationRequestId;
             this.destinationTimer = setTimeout(() => {
-                if (this.destination.length >= 3) {
-                    this.fetchSuggestions(this.destination, 'destination');
-                }
+                this.fetchSuggestions(query, 'destination', requestId);
             }, 300);
         },
         
-        async fetchSuggestions(query, type) {
+        async fetchSuggestions(query, type, requestId = null) {
+            const idKey = type === 'departure' ? 'departureRequestId' : 'destinationRequestId';
+            const controllerKey = type === 'departure' ? 'departureAbortController' : 'destinationAbortController';
+            const inputKey = type === 'departure' ? 'departure' : 'destination';
+            const suggestionsKey = type === 'departure' ? 'departureSuggestions' : 'destinationSuggestions';
+
+            this[controllerKey]?.abort();
+            const controller = new AbortController();
+            this[controllerKey] = controller;
+            const activeRequestId = requestId ?? ++this[idKey];
+
             try {
                 const url = `https://nominatim.openstreetmap.org/search?format=json&q=${encodeURIComponent(query)}&countrycodes=be,nl&limit=5&addressdetails=1`;
-                const response = await fetch(url, {
+                const response = await fetchWithTimeout(url, {
+                    signal: controller.signal,
                     headers: {
-                        'User-Agent': 'FuelTracker/1.0'
+                        'Accept': 'application/json',
+                        'Accept-Language': 'nl-BE,nl;q=0.9,en;q=0.6'
                     }
-                });
+                }, 8000);
+                if (!response.ok) throw new Error(`Adresdienst gaf HTTP ${response.status}`);
                 const data = await response.json();
+                if (!Array.isArray(data)) throw new Error('Ongeldig antwoord van de adresdienst');
 
-                const suggestions = data.map(item => {
+                if (controller.signal.aborted || activeRequestId !== this[idKey] || this[inputKey].trim() !== query) {
+                    return;
+                }
+
+                const suggestions = data.filter(item => item && item.lat && item.lon && item.display_name).map(item => {
+                    const displayName = String(item.display_name);
                     // Format the address for display
                     let formattedAddress = '';
 
@@ -568,39 +762,43 @@ createApp({
                         if (city) {
                             formattedAddress = parts.join(' ') + (parts.length > 0 ? ', ' : '') + city;
                         } else {
-                            formattedAddress = parts.join(' ') || item.display_name.split(',')[0];
+                            formattedAddress = parts.join(' ') || displayName.split(',')[0];
                         }
                     } else {
                         // Fallback to first part of display_name
-                        formattedAddress = item.display_name.split(',')[0];
+                        formattedAddress = displayName.split(',')[0];
                     }
 
                     return {
-                        name: item.name || item.display_name.split(',')[0],
-                        display_name: item.display_name,
+                        name: item.name || displayName.split(',')[0],
+                        display_name: displayName,
                         formatted_address: formattedAddress,
                         lat: parseFloat(item.lat),
                         lon: parseFloat(item.lon)
                     };
                 });
 
-                if (type === 'departure') {
-                    this.departureSuggestions = suggestions;
-                } else {
-                    this.destinationSuggestions = suggestions;
-                }
+                this[suggestionsKey] = suggestions;
             } catch (error) {
+                if (error.name === 'AbortError') return;
                 console.error('Error fetching suggestions:', error);
+                if (activeRequestId === this[idKey]) this[suggestionsKey] = [];
+            } finally {
+                if (this[controllerKey] === controller) this[controllerKey] = null;
             }
         },
         
         selectDeparture(suggestion) {
+            this.departureAbortController?.abort();
+            this.departureRequestId++;
             this.departure = suggestion.formatted_address;
             this.departureCoords = { lat: suggestion.lat, lon: suggestion.lon };
             this.departureSuggestions = [];
         },
 
         selectDestination(suggestion) {
+            this.destinationAbortController?.abort();
+            this.destinationRequestId++;
             this.destination = suggestion.formatted_address;
             this.destinationCoords = { lat: suggestion.lat, lon: suggestion.lon };
             this.destinationSuggestions = [];
@@ -616,8 +814,13 @@ createApp({
         
         // Calculate
         async calculateTrip() {
-            if (!this.departure || !this.destination || !this.consumption || this.consumption < 2 || this.consumption > 25) {
-                alert('Vul alle velden correct in (brandstofverbruik: 2-25 L/100km)');
+            this.clearError();
+            const consumption = Number(this.consumption);
+            const passengers = Math.min(9, Math.max(1, Math.floor(Number(this.passengers) || 1)));
+            this.passengers = passengers;
+
+            if (!this.departure.trim() || !this.destination.trim() || !Number.isFinite(consumption) || consumption < 2 || consumption > 25) {
+                this.showError('Vul vertrek, bestemming en een verbruik tussen 2 en 25 L/100 km in.');
                 return;
             }
             
@@ -643,66 +846,108 @@ createApp({
                 }
                 
                 // Calculate
-                const distanceKm = route.distance / 1000;
-                const durationMin = route.duration / 60;
-                const fuelNeeded = (distanceKm * this.consumption) / 100;
-                const cost = fuelNeeded * this.currentFuelPrice;
-                const co2 = fuelNeeded * 2.35; // Simple CO2 calculation
+                const fuelPrice = Number(this.currentFuelPrice);
+                if (!Number.isFinite(fuelPrice) || fuelPrice <= 0) throw new Error('De brandstofprijs is ongeldig.');
+                const {
+                    distanceKm,
+                    durationMin,
+                    fuelNeeded,
+                    cost,
+                    costPerPerson,
+                    co2,
+                    co2Factor
+                } = calculateTripMetrics({
+                    oneWayDistanceMeters: route.distance,
+                    oneWayDurationSeconds: route.duration,
+                    consumption,
+                    fuelPrice,
+                    fuelType: this.fuelType,
+                    roundTrip: this.roundTrip,
+                    passengers
+                });
                 
                 this.result = {
                     distance: distanceKm.toFixed(1),
                     duration: Math.round(durationMin),
                     cost: cost.toFixed(2),
-                    fuelPrice: this.currentFuelPrice.toFixed(3),
-                    co2: co2.toFixed(1)
+                    costPerPerson: costPerPerson.toFixed(2),
+                    fuelNeeded: fuelNeeded.toFixed(2),
+                    consumption: consumption.toFixed(1),
+                    fuelPrice: fuelPrice.toFixed(3),
+                    co2: co2.toFixed(1),
+                    co2Factor,
+                    roundTrip: this.roundTrip,
+                    passengers,
+                    vehicleName: this.vehicleName.trim()
                 };
                 
-                // Draw on map
-                this.mapService.drawRoute(
-                    route.geometry,
-                    this.departureCoords,
-                    this.destinationCoords,
-                    this.departure,
-                    this.destination
-                );
+                // The result section uses v-if, so wait until #map exists.
+                await this.$nextTick();
+                if (this.mapService.initMap()) {
+                    this.mapService.drawRoute(
+                        route.geometry,
+                        this.departureCoords,
+                        this.destinationCoords,
+                        this.departure,
+                        this.destination
+                    );
+                }
                 
                 // Save to history
                 const trip = {
+                    id: `trip-${Date.now()}`,
                     departure: this.departure,
                     destination: this.destination,
                     distance: distanceKm.toFixed(1),
+                    duration: Math.round(durationMin),
                     cost: cost.toFixed(2),
+                    costPerPerson: costPerPerson.toFixed(2),
+                    consumption: consumption.toFixed(1),
+                    fuelNeeded: fuelNeeded.toFixed(2),
                     fuelType: this.fuelType,
                     gasStation: this.gasStation,
-                    fuelPrice: this.currentFuelPrice.toFixed(3),
+                    fuelPrice: fuelPrice.toFixed(3),
                     date: new Date().toISOString(),
-                    co2: co2.toFixed(1)
+                    co2: co2.toFixed(1),
+                    co2Factor,
+                    roundTrip: this.roundTrip,
+                    passengers,
+                    vehicleName: this.vehicleName.trim()
                 };
                 
                 this.history.push(trip);
                 this.storageService.saveHistory(this.history);
+                this.addRecentRoute();
+                await this.$nextTick();
                 this.chartService.updateChart(this.history);
+                this.showToast('Rit berekend en aan je geschiedenis toegevoegd.', 'success');
                 
             } catch (error) {
-                alert('Fout: ' + error.message);
+                console.error('Error calculating trip:', error);
+                this.showError(error.message || 'De rit kon niet worden berekend.');
             } finally {
                 this.isCalculating = false;
             }
         },
         
         async geocodeAddress(address) {
-            const url = `https://nominatim.openstreetmap.org/search?format=json&q=${encodeURIComponent(address)}&limit=1`;
-            const response = await fetch(url, {
+            const url = `https://nominatim.openstreetmap.org/search?format=json&q=${encodeURIComponent(address)}&countrycodes=be,nl&limit=1`;
+            const response = await fetchWithTimeout(url, {
                 headers: {
-                    'User-Agent': 'FuelTracker/1.0'
+                    'Accept': 'application/json',
+                    'Accept-Language': 'nl-BE,nl;q=0.9,en;q=0.6'
                 }
-            });
+            }, 10000);
+            if (!response.ok) throw new Error(`Adresdienst gaf HTTP ${response.status}`);
             const data = await response.json();
             
-            if (data && data.length > 0) {
+            if (Array.isArray(data) && data.length > 0) {
+                const lat = parseFloat(data[0].lat);
+                const lon = parseFloat(data[0].lon);
+                if (!Number.isFinite(lat) || !Number.isFinite(lon)) return null;
                 return {
-                    lat: parseFloat(data[0].lat),
-                    lon: parseFloat(data[0].lon)
+                    lat,
+                    lon
                 };
             }
             return null;
@@ -710,7 +955,8 @@ createApp({
         
         async getRoute(start, end) {
             const url = `https://router.project-osrm.org/route/v1/driving/${start.lon},${start.lat};${end.lon},${end.lat}?overview=full&geometries=geojson`;
-            const response = await fetch(url);
+            const response = await fetchWithTimeout(url, { headers: { 'Accept': 'application/json' } }, 15000);
+            if (!response.ok) throw new Error(`Routedienst gaf HTTP ${response.status}`);
             const data = await response.json();
             
             if (data && data.code === 'Ok' && data.routes && data.routes.length > 0) {
@@ -718,12 +964,217 @@ createApp({
             }
             return null;
         },
+
+        // Vehicle profiles and defaults
+        applyVehicleDefaults(defaults) {
+            if (!defaults || typeof defaults !== 'object') return;
+            if (typeof defaults.vehicleName === 'string') this.vehicleName = defaults.vehicleName;
+            if (Number(defaults.consumption) >= 2 && Number(defaults.consumption) <= 25) {
+                this.consumption = Number(defaults.consumption);
+            }
+            if (CO2_FACTORS_KG_PER_LITRE[defaults.fuelType]) this.fuelType = defaults.fuelType;
+        },
+
+        saveVehicleDefaults() {
+            const consumption = Number(this.consumption);
+            if (!Number.isFinite(consumption) || consumption < 2 || consumption > 25) {
+                this.showError('Vul eerst een geldig voertuigverbruik tussen 2 en 25 L/100 km in.');
+                return false;
+            }
+            const defaults = {
+                vehicleName: this.vehicleName.trim(),
+                consumption,
+                fuelType: this.fuelType
+            };
+            const saved = this.storageService.save(this.storageService.defaultsKey, defaults);
+            if (saved) this.showToast('Voertuig als standaard ingesteld.', 'success');
+            else this.showError('Het standaardvoertuig kon niet worden opgeslagen.');
+            return saved;
+        },
+
+        saveVehicleProfile(profileData = null) {
+            const source = profileData && typeof profileData === 'object' && 'consumption' in profileData ? profileData : this;
+            const consumption = Number(source.consumption);
+            const vehicleName = String(source.vehicleName || '').trim();
+            const fuelType = source.fuelType;
+            if (!vehicleName || !Number.isFinite(consumption) || consumption < 2 || consumption > 25 || !CO2_FACTORS_KG_PER_LITRE[fuelType]) {
+                this.showError('Geef het voertuig een naam en een geldig verbruik tussen 2 en 25 L/100 km.');
+                return null;
+            }
+
+            const existing = this.vehicleProfiles.find(profile => String(profile.vehicleName || '').toLowerCase() === vehicleName.toLowerCase());
+            const profile = {
+                id: existing?.id || `vehicle-${Date.now()}`,
+                vehicleName,
+                consumption,
+                fuelType,
+                updatedAt: new Date().toISOString()
+            };
+            if (existing) Object.assign(existing, profile);
+            else this.vehicleProfiles.push(profile);
+
+            if (!this.storageService.save(this.storageService.profileKey, this.vehicleProfiles)) {
+                this.showError('Het voertuigprofiel kon niet worden opgeslagen.');
+                return null;
+            }
+            this.showToast(`Voertuigprofiel “${vehicleName}” opgeslagen.`, 'success');
+            return profile;
+        },
+
+        applyVehicleProfile(profileOrId) {
+            const profile = typeof profileOrId === 'string'
+                ? this.vehicleProfiles.find(item => item.id === profileOrId)
+                : profileOrId;
+            if (!profile) return false;
+            this.applyVehicleDefaults(profile);
+            this.showToast(`Voertuigprofiel “${profile.vehicleName}” toegepast.`, 'success');
+            return true;
+        },
+
+        deleteVehicleProfile(profileOrId) {
+            const id = typeof profileOrId === 'string' ? profileOrId : profileOrId?.id;
+            const index = this.vehicleProfiles.findIndex(profile => profile.id === id);
+            if (index < 0) return false;
+            const [removed] = this.vehicleProfiles.splice(index, 1);
+            this.storageService.save(this.storageService.profileKey, this.vehicleProfiles);
+            this.showToast(`Voertuigprofiel “${removed.vehicleName}” verwijderd.`, 'info');
+            return true;
+        },
+
+        // Favorite and recent routes
+        routeKey(route) {
+            return `${String(route?.departure || '').trim().toLowerCase()}::${String(route?.destination || '').trim().toLowerCase()}`;
+        },
+
+        currentRouteData() {
+            return {
+                departure: this.departure.trim(),
+                destination: this.destination.trim(),
+                departureCoords: this.departureCoords ? { ...this.departureCoords } : null,
+                destinationCoords: this.destinationCoords ? { ...this.destinationCoords } : null
+            };
+        },
+
+        addRecentRoute(routeData = null) {
+            const route = routeData && routeData.departure !== undefined ? routeData : this.currentRouteData();
+            if (!route.departure || !route.destination) return null;
+            const key = this.routeKey(route);
+            this.recentRoutes = this.recentRoutes.filter(item => this.routeKey(item) !== key);
+            const recent = {
+                ...route,
+                id: `recent-${Date.now()}`,
+                lastUsedAt: new Date().toISOString()
+            };
+            this.recentRoutes.unshift(recent);
+            this.recentRoutes = this.recentRoutes.slice(0, 8);
+            this.storageService.save(this.storageService.recentsKey, this.recentRoutes);
+            return recent;
+        },
+
+        saveFavoriteRoute(routeData = null) {
+            const route = routeData && routeData.departure !== undefined ? routeData : this.currentRouteData();
+            if (!route.departure || !route.destination) {
+                this.showError('Vul eerst een vertrekpunt en bestemming in.');
+                return null;
+            }
+            const key = this.routeKey(route);
+            const existing = this.favoriteRoutes.find(item => this.routeKey(item) === key);
+            if (existing) return existing;
+            const favorite = {
+                ...route,
+                id: `favorite-${Date.now()}`,
+                createdAt: new Date().toISOString()
+            };
+            this.favoriteRoutes.unshift(favorite);
+            this.storageService.save(this.storageService.favoritesKey, this.favoriteRoutes);
+            this.showToast('Route toegevoegd aan favorieten.', 'success');
+            return favorite;
+        },
+
+        deleteFavoriteRoute(routeOrId) {
+            const id = typeof routeOrId === 'string' ? routeOrId : routeOrId?.id;
+            const key = typeof routeOrId === 'object' ? this.routeKey(routeOrId) : null;
+            const index = this.favoriteRoutes.findIndex(item => item.id === id || (key && this.routeKey(item) === key));
+            if (index < 0) return false;
+            this.favoriteRoutes.splice(index, 1);
+            this.storageService.save(this.storageService.favoritesKey, this.favoriteRoutes);
+            this.showToast('Route uit favorieten verwijderd.', 'info');
+            return true;
+        },
+
+        isFavoriteRoute(routeData = null) {
+            const route = routeData && routeData.departure !== undefined ? routeData : this.currentRouteData();
+            const key = this.routeKey(route);
+            return Boolean(route.departure && route.destination && this.favoriteRoutes.some(item => this.routeKey(item) === key));
+        },
+
+        toggleFavoriteRoute(routeData = null) {
+            const route = routeData && routeData.departure !== undefined ? routeData : this.currentRouteData();
+            return this.isFavoriteRoute(route) ? this.deleteFavoriteRoute(route) : this.saveFavoriteRoute(route);
+        },
+
+        // UI-friendly aliases retained alongside the explicit route methods.
+        saveCurrentAsFavorite() {
+            return this.saveFavoriteRoute();
+        },
+
+        applyFavorite(favorite) {
+            return this.applySavedRoute(favorite);
+        },
+
+        deleteFavorite(id) {
+            return this.deleteFavoriteRoute(id);
+        },
+
+        applySavedRoute(route) {
+            if (!route) return false;
+            this.departure = route.departure || '';
+            this.destination = route.destination || '';
+            this.departureCoords = route.departureCoords ? { ...route.departureCoords } : null;
+            this.destinationCoords = route.destinationCoords ? { ...route.destinationCoords } : null;
+            this.departureSuggestions = [];
+            this.destinationSuggestions = [];
+            return true;
+        },
+
+        swapLocations() {
+            [this.departure, this.destination] = [this.destination, this.departure];
+            [this.departureCoords, this.destinationCoords] = [this.destinationCoords, this.departureCoords];
+            [this.departureSuggestions, this.destinationSuggestions] = [[], []];
+        },
         
-        deleteTrip(index) {
+        async deleteTrip(index) {
             const actualIndex = this.history.length - 1 - index;
-            this.history.splice(actualIndex, 1);
+            if (actualIndex < 0 || actualIndex >= this.history.length) return;
+            const [trip] = this.history.splice(actualIndex, 1);
+            this.deletedTrip = { trip, index: actualIndex };
             this.storageService.saveHistory(this.history);
+            await this.$nextTick();
             this.chartService.updateChart(this.history);
+            if (this.undoTimer) clearTimeout(this.undoTimer);
+            this.undoTimer = setTimeout(() => {
+                this.deletedTrip = null;
+                this.undoTimer = null;
+            }, 8000);
+            this.showToast('Rit verwijderd. Je kunt dit nog ongedaan maken.', 'info', 8000);
+        },
+
+        async undoDeleteTrip() {
+            if (!this.deletedTrip) return false;
+            const { trip, index } = this.deletedTrip;
+            this.history.splice(Math.min(index, this.history.length), 0, trip);
+            this.deletedTrip = null;
+            if (this.undoTimer) clearTimeout(this.undoTimer);
+            this.undoTimer = null;
+            this.storageService.saveHistory(this.history);
+            await this.$nextTick();
+            this.chartService.updateChart(this.history);
+            this.showToast('Verwijderde rit hersteld.', 'success');
+            return true;
+        },
+
+        undoDelete() {
+            return this.undoDeleteTrip();
         },
         
         exportHistory() {
@@ -738,7 +1189,7 @@ createApp({
                 return str;
             };
 
-            let csv = 'Datum,Vertrek,Bestemming,Afstand,Kosten,Brandstof,Tankstation,Prijs\n';
+            let csv = 'Datum,Vertrek,Bestemming,Afstand (km),Duur (min),Kosten,Per persoon,Verbruik (L/100km),Liters,Brandstof,Tankstation,Prijs,Retour,Passagiers,CO2 (kg),Voertuig\n';
             this.history.forEach(trip => {
                 const stationName = this.fuelService.getStationName(trip.gasStation || 'average');
                 const row = [
@@ -746,10 +1197,18 @@ createApp({
                     escapeCsvField(trip.departure),
                     escapeCsvField(trip.destination),
                     trip.distance,
+                    trip.duration ?? '',
                     trip.cost,
+                    trip.costPerPerson ?? trip.cost,
+                    trip.consumption ?? '',
+                    trip.fuelNeeded ?? '',
                     this.getFuelTypeName(trip.fuelType),
                     stationName,
-                    trip.fuelPrice || 'N/A'
+                    trip.fuelPrice || 'N/A',
+                    trip.roundTrip ? 'Ja' : 'Nee',
+                    trip.passengers || 1,
+                    trip.co2 ?? '',
+                    escapeCsvField(trip.vehicleName || '')
                 ];
                 csv += row.join(',') + '\n';
             });
@@ -837,5 +1296,11 @@ createApp({
         if (this.destinationTimer) {
             clearTimeout(this.destinationTimer);
         }
+        if (this.toastTimer) clearTimeout(this.toastTimer);
+        if (this.undoTimer) clearTimeout(this.undoTimer);
+        this.departureAbortController?.abort();
+        this.destinationAbortController?.abort();
+        this.mapService?.destroy();
+        this.chartService?.destroy();
     }
 }).mount('#app');

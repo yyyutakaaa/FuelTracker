@@ -3,442 +3,317 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <meta name="description" content="Bereken brandstofkosten voor uw reis met actuele prijzen en routeplanning">
-    <meta name="theme-color" content="#1a202c">
-    <title>FuelTracker - Brandstofkosten Calculator</title>
-    
-    <!-- PWA -->
+    <meta name="description" content="Bereken de echte brandstofkosten van je route met actuele Belgische prijzen.">
+    <meta name="theme-color" content="#132d26">
+    <title>FuelTracker — Weet wat je rit kost</title>
+
     <link rel="manifest" href="manifest.json">
-    <link rel="icon" type="image/png" sizes="192x192" href="icon-192.png">
-    <link rel="apple-touch-icon" href="icon-192.png">
-    
-    <!-- Tailwind CSS -->
-    <script src="https://cdn.tailwindcss.com"></script>
-    <script>
-        tailwind.config = {
-            darkMode: 'class'
-        }
-    </script>
-    
-    <!-- Leaflet -->
-    <link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css" />
-    
-    <!-- Font Awesome -->
-    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.1/css/all.min.css">
-    
-    <!-- Custom CSS -->
+    <link rel="icon" type="image/svg+xml" href="icon.svg">
+    <link rel="apple-touch-icon" href="icon.svg">
+    <link rel="stylesheet" href="css/tailwind.generated.css">
+    <link rel="stylesheet" href="vendor/leaflet/leaflet.css">
+    <link rel="stylesheet" href="vendor/fontawesome/css/all.min.css">
     <link rel="stylesheet" href="css/style.css">
 </head>
-<body class="min-h-screen bg-gray-50 dark:bg-gray-900 text-gray-900 dark:text-gray-100 transition-colors duration-200">
-    <!-- Loading Screen -->
-    <div id="loadingScreen" class="fixed inset-0 bg-white dark:bg-gray-900 flex items-center justify-center z-50">
-        <div class="text-center">
-            <div class="w-16 h-16 border-4 border-blue-500 border-t-transparent rounded-full animate-spin mb-4"></div>
-            <p class="text-gray-600 dark:text-gray-400">Laden...</p>
+<body>
+    <a class="skip-link" href="#calculator">Ga naar de routeplanner</a>
+
+    <div id="loadingScreen" class="loading-screen" role="status" aria-live="polite">
+        <div class="loading-mark" aria-hidden="true"><i class="fa-solid fa-route"></i></div>
+        <div>
+            <strong>FuelTracker wordt gestart</strong>
+            <span>De actuele brandstofprijs wordt opgehaald…</span>
         </div>
     </div>
 
-    <!-- Navigation -->
-    <nav class="bg-white dark:bg-gray-800 shadow-lg sticky top-0 z-40">
-        <div class="container mx-auto px-4">
-            <div class="flex justify-between items-center h-16">
-                <div class="flex items-center space-x-3">
-                    <i class="fas fa-gas-pump text-2xl text-blue-500"></i>
-                    <span class="text-xl font-bold">FuelTracker</span>
-                </div>
-                
-                <div class="hidden md:flex items-center space-x-6">
-                    <a href="#calculator" class="nav-link">Calculator</a>
-                    <a href="#history" class="nav-link">Geschiedenis</a>
-                    <a href="#chart" class="nav-link">Statistieken</a>
-                    <button id="themeToggle" class="p-2 rounded-lg hover:bg-gray-100 dark:hover:bg-gray-700 transition-colors">
-                        <i class="fas fa-moon dark:hidden text-gray-700"></i>
-                        <i class="fas fa-sun hidden dark:block text-yellow-400"></i>
-                    </button>
-                </div>
-                
-                <button class="md:hidden p-2" id="mobileMenuBtn">
-                    <i class="fas fa-bars text-xl"></i>
+    <nav class="site-nav" aria-label="Hoofdnavigatie">
+        <div class="nav-shell">
+            <a class="brand" href="#calculator" aria-label="FuelTracker, naar routeplanner">
+                <span class="brand-mark" aria-hidden="true"><i class="fa-solid fa-gas-pump"></i></span>
+                <span>Fuel<span>Tracker</span></span>
+            </a>
+
+            <div class="desktop-nav">
+                <a href="#calculator" class="nav-link">Plan een rit</a>
+                <a href="#favorites" class="nav-link">Bewaard</a>
+                <a href="#history" class="nav-link">Ritlogboek</a>
+                <button id="themeToggle" class="icon-button" type="button" aria-label="Wissel kleurthema" title="Wissel kleurthema">
+                    <i class="fa-solid fa-moon dark-icon" aria-hidden="true"></i>
+                    <i class="fa-solid fa-sun light-icon" aria-hidden="true"></i>
                 </button>
             </div>
+
+            <button class="icon-button mobile-menu-button" type="button" id="mobileMenuBtn" aria-label="Open navigatiemenu" aria-controls="mobileMenu" aria-expanded="false">
+                <i class="fa-solid fa-bars" aria-hidden="true"></i>
+            </button>
         </div>
-        
-        <!-- Mobile Menu -->
-        <div id="mobileMenu" class="hidden md:hidden bg-white dark:bg-gray-800 border-t dark:border-gray-700">
-            <div class="px-4 py-2 space-y-2">
-                <a href="#calculator" class="block py-2 nav-link">Calculator</a>
-                <a href="#history" class="block py-2 nav-link">Geschiedenis</a>
-                <a href="#chart" class="block py-2 nav-link">Statistieken</a>
-                <button id="themeToggleMobile" class="w-full text-left py-2 nav-link flex items-center gap-2">
-                    <i class="fas fa-moon dark:hidden text-gray-700"></i>
-                    <i class="fas fa-sun hidden dark:block text-yellow-400"></i>
-                    <span class="dark:hidden">Dark mode</span>
-                    <span class="hidden dark:block">Light mode</span>
-                </button>
-            </div>
+
+        <div id="mobileMenu" class="mobile-menu hidden">
+            <a href="#calculator" class="nav-link">Plan een rit</a>
+            <a href="#favorites" class="nav-link">Bewaard</a>
+            <a href="#history" class="nav-link">Ritlogboek</a>
+            <button id="themeToggleMobile" class="nav-link theme-menu-button" type="button">
+                <i class="fa-solid fa-circle-half-stroke" aria-hidden="true"></i> Wissel kleurthema
+            </button>
         </div>
     </nav>
 
-    <!-- Main Content -->
-    <main id="app" class="container mx-auto px-4 py-8">
-        <!-- Calculator Section -->
-        <section id="calculator" class="bg-white dark:bg-gray-800 rounded-xl shadow-md p-6 mb-8">
-            <h1 class="text-2xl font-bold mb-6 flex items-center">
-                <i class="fas fa-calculator mr-3 text-blue-500"></i>
-                Brandstofkosten Calculator
-            </h1>
-            
-            <div class="grid md:grid-cols-2 gap-6">
-                <!-- Departure Input -->
-                <div class="relative">
-                    <label class="block text-sm font-medium mb-2">Vertrekpunt</label>
-                    <div class="relative">
-                        <input 
-                            type="text" 
-                            v-model="departure"
-                            @input="searchDeparture"
-                            @focus="departureFocused = true"
-                            @blur="handleDepartureBlur"
-                            placeholder="Straat, stad of postcode..."
-                            class="w-full px-4 py-3 pr-10 border rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500 dark:bg-gray-700 dark:border-gray-600"
-                            required
-                        >
-                        <i class="fas fa-map-marker-alt absolute right-3 top-3.5 text-gray-400"></i>
+    <main id="app">
+        <div class="app-message" v-if="appMessage &amp;&amp; appMessage.text" :class="`is-${appMessage.type || 'info'}`" role="status" aria-live="polite">
+            <i class="fa-solid" :class="appMessage.type === 'error' ? 'fa-circle-exclamation' : 'fa-circle-check'" aria-hidden="true"></i>
+            <span>{{ appMessage.text }}</span>
+        </div>
+
+        <header class="hero-copy">
+            <p class="eyebrow"><span></span> Slimmer onderweg</p>
+            <h1>Weet wat je rit kost <em>voor je vertrekt.</em></h1>
+            <p>Plan je route, gebruik de actuele brandstofprijs en krijg meteen een heldere kostenraming.</p>
+        </header>
+
+        <section id="calculator" class="route-workspace" aria-labelledby="planner-title">
+            <div class="planner-pane">
+                <div class="section-heading compact">
+                    <div>
+                        <p class="step-label">Nieuwe berekening</p>
+                        <h2 id="planner-title">Plan je rit</h2>
                     </div>
-                    
-                    <!-- Departure Suggestions -->
-                    <div v-if="departureSuggestions.length > 0 && departureFocused"
-                         class="absolute z-10 w-full mt-1 bg-white dark:bg-gray-700 border dark:border-gray-600 rounded-lg shadow-lg max-h-60 overflow-y-auto">
-                        <div v-for="(suggestion, index) in departureSuggestions"
-                             :key="index"
-                             @click="selectDeparture(suggestion)"
-                             class="px-4 py-3 hover:bg-gray-100 dark:hover:bg-gray-600 cursor-pointer border-b dark:border-gray-600 last:border-b-0">
-                            <div class="font-medium">{{ suggestion.formatted_address }}</div>
-                        </div>
-                    </div>
-                </div>
-                
-                <!-- Destination Input -->
-                <div class="relative">
-                    <label class="block text-sm font-medium mb-2">Bestemming</label>
-                    <div class="relative">
-                        <input 
-                            type="text" 
-                            v-model="destination"
-                            @input="searchDestination"
-                            @focus="destinationFocused = true"
-                            @blur="handleDestinationBlur"
-                            placeholder="Straat, stad of postcode..."
-                            class="w-full px-4 py-3 pr-10 border rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500 dark:bg-gray-700 dark:border-gray-600"
-                            required
-                        >
-                        <i class="fas fa-map-marker-alt absolute right-3 top-3.5 text-gray-400"></i>
-                    </div>
-                    
-                    <!-- Destination Suggestions -->
-                    <div v-if="destinationSuggestions.length > 0 && destinationFocused"
-                         class="absolute z-10 w-full mt-1 bg-white dark:bg-gray-700 border dark:border-gray-600 rounded-lg shadow-lg max-h-60 overflow-y-auto">
-                        <div v-for="(suggestion, index) in destinationSuggestions"
-                             :key="index"
-                             @click="selectDestination(suggestion)"
-                             class="px-4 py-3 hover:bg-gray-100 dark:hover:bg-gray-600 cursor-pointer border-b dark:border-gray-600 last:border-b-0">
-                            <div class="font-medium">{{ suggestion.formatted_address }}</div>
-                        </div>
-                    </div>
-                </div>
-                
-                <!-- Fuel Consumption Input -->
-                <div>
-                    <label class="block text-sm font-medium mb-2">Brandstofverbruik (L/100km)</label>
-                    <div class="relative">
-                        <input 
-                            type="number" 
-                            v-model.number="consumption"
-                            min="2"
-                            max="25"
-                            step="0.1"
-                            placeholder="Bijv. 6.5"
-                            class="w-full px-4 py-3 pr-10 border rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500 dark:bg-gray-700 dark:border-gray-600"
-                            required
-                        >
-                        <i class="fas fa-gas-pump absolute right-3 top-3.5 text-gray-400"></i>
-                    </div>
-                    <p class="text-xs text-gray-500 mt-1">Gemiddeld: 5-8 L/100km</p>
-                </div>
-                
-                <!-- Fuel Type Select -->
-                <div>
-                    <label class="block text-sm font-medium mb-2">Brandstoftype</label>
-                    <select
-                        v-model="fuelType"
-                        class="w-full px-4 py-3 border rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500 dark:bg-gray-700 dark:border-gray-600"
-                    >
-                        <option value="euro95">Euro 95 (E10)</option>
-                        <option value="euro98">Euro 98 (E5)</option>
-                        <option value="diesel">Diesel (B7)</option>
-                        <option value="lpg">LPG</option>
-                    </select>
+                    <span class="step-pill">01</span>
                 </div>
 
-                <!-- Price Source Select -->
-                <div>
-                    <label class="block text-sm font-medium mb-2">Prijsbron</label>
-                    <select
-                        v-model="gasStation"
-                        class="w-full px-4 py-3 border rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500 dark:bg-gray-700 dark:border-gray-600"
-                    >
-                        <option value="average">Officiële gemiddelde prijs</option>
-                        <option value="custom">Aangepaste prijs invoeren</option>
-                    </select>
-                    <p class="text-xs text-gray-500 mt-1">
-                        <i class="fas fa-info-circle mr-1"></i>
-                        Gemiddelde prijs via StatBel API (Belgische overheid)
-                    </p>
-                </div>
+                <form class="route-form" @submit.prevent="calculateTrip">
+                    <fieldset class="route-fields">
+                        <legend class="sr-only">Route</legend>
+                        <div class="route-line" aria-hidden="true"><span></span><i></i><span></span></div>
 
-                <!-- Custom Price Input -->
-                <div v-if="gasStation === 'custom'">
-                    <label class="block text-sm font-medium mb-2">Aangepaste brandstofprijs (€/L)</label>
-                    <div class="relative">
-                        <input
-                            type="number"
-                            v-model.number="customPrice"
-                            min="0.5"
-                            max="5"
-                            step="0.001"
-                            placeholder="Bijv. 1.599"
-                            class="w-full px-4 py-3 pr-10 border rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500 dark:bg-gray-700 dark:border-gray-600"
-                            required
-                        >
-                        <i class="fas fa-euro-sign absolute right-3 top-3.5 text-gray-400"></i>
+                        <div class="field address-field">
+                            <label for="departure">Van</label>
+                            <div class="input-shell">
+                                <i class="fa-regular fa-circle-dot field-icon" aria-hidden="true"></i>
+                                <input id="departure" type="text" v-model="departure" @input="searchDeparture" @focus="departureFocused = true" @blur="handleDepartureBlur" placeholder="Vertrekadres" autocomplete="street-address" aria-autocomplete="list" :aria-expanded="departureSuggestions.length > 0 &amp;&amp; departureFocused ? 'true' : 'false'" aria-controls="departure-suggestions" required>
+                            </div>
+                            <div id="departure-suggestions" v-if="departureSuggestions.length > 0 &amp;&amp; departureFocused" class="autocomplete-dropdown" role="listbox" aria-label="Suggesties voor vertrekpunt">
+                                <button type="button" v-for="(suggestion, index) in departureSuggestions" :key="index" @mousedown.prevent="selectDeparture(suggestion)" @keydown.enter.prevent="selectDeparture(suggestion)" class="autocomplete-item" role="option">
+                                    <i class="fa-solid fa-location-dot" aria-hidden="true"></i><span>{{ suggestion.formatted_address }}</span>
+                                </button>
+                            </div>
+                        </div>
+
+                        <button class="swap-button" type="button" @click="swapLocations" aria-label="Wissel vertrekpunt en bestemming" title="Wissel locaties">
+                            <i class="fa-solid fa-arrow-right-arrow-left" aria-hidden="true"></i>
+                        </button>
+
+                        <div class="field address-field">
+                            <label for="destination">Naar</label>
+                            <div class="input-shell">
+                                <i class="fa-solid fa-location-dot field-icon destination-dot" aria-hidden="true"></i>
+                                <input id="destination" type="text" v-model="destination" @input="searchDestination" @focus="destinationFocused = true" @blur="handleDestinationBlur" placeholder="Bestemmingsadres" autocomplete="street-address" aria-autocomplete="list" :aria-expanded="destinationSuggestions.length > 0 &amp;&amp; destinationFocused ? 'true' : 'false'" aria-controls="destination-suggestions" required>
+                            </div>
+                            <div id="destination-suggestions" v-if="destinationSuggestions.length > 0 &amp;&amp; destinationFocused" class="autocomplete-dropdown" role="listbox" aria-label="Suggesties voor bestemming">
+                                <button type="button" v-for="(suggestion, index) in destinationSuggestions" :key="index" @mousedown.prevent="selectDestination(suggestion)" @keydown.enter.prevent="selectDestination(suggestion)" class="autocomplete-item" role="option">
+                                    <i class="fa-solid fa-location-dot" aria-hidden="true"></i><span>{{ suggestion.formatted_address }}</span>
+                                </button>
+                            </div>
+                        </div>
+                    </fieldset>
+
+                    <div class="trip-options" aria-label="Ritopties">
+                        <label class="toggle-row" for="round-trip">
+                            <span><strong>Heen en terug</strong><small>Verdubbel afstand en kosten</small></span>
+                            <span class="toggle-control"><input id="round-trip" type="checkbox" v-model="roundTrip"><i aria-hidden="true"></i></span>
+                        </label>
+                        <div class="passenger-field">
+                            <label for="passengers">Reizigers</label>
+                            <div class="input-shell compact-input"><i class="fa-solid fa-user-group field-icon" aria-hidden="true"></i><input id="passengers" type="number" v-model.number="passengers" min="1" max="9" inputmode="numeric"></div>
+                        </div>
                     </div>
-                    <p class="text-xs text-gray-500 mt-1">Vul de prijs in die je bij het tankstation zag</p>
-                </div>
+
+                    <div class="form-divider"><span>Voertuig &amp; prijs</span></div>
+
+                    <div class="form-grid">
+                        <div class="field span-two">
+                            <label for="vehicle-name">Voertuigprofiel <span>optioneel</span></label>
+                            <div class="vehicle-entry">
+                                <div class="input-shell"><i class="fa-solid fa-car-side field-icon" aria-hidden="true"></i><input id="vehicle-name" type="text" v-model.trim="vehicleName" placeholder="Bijv. Mijn Golf"></div>
+                                <button class="secondary-button compact-button" type="button" @click="saveVehicleProfile" :disabled="!vehicleName || !consumption">Bewaar</button>
+                            </div>
+                            <div class="chip-row" v-if="vehicleProfiles.length" aria-label="Bewaarde voertuigprofielen">
+                                <button type="button" v-for="profile in vehicleProfiles" :key="profile.id || profile.name" @click="applyVehicleProfile(profile)" class="choice-chip"><i class="fa-solid fa-car" aria-hidden="true"></i>{{ profile.name || profile.vehicleName }}</button>
+                            </div>
+                        </div>
+
+                        <div class="field">
+                            <label for="consumption">Verbruik <span>L/100 km</span></label>
+                            <div class="input-shell"><i class="fa-solid fa-gauge-high field-icon" aria-hidden="true"></i><input id="consumption" type="number" v-model.number="consumption" min="2" max="25" step="0.1" placeholder="6,5" inputmode="decimal" required></div>
+                        </div>
+
+                        <div class="field">
+                            <label for="fuel-type">Brandstof</label>
+                            <select id="fuel-type" v-model="fuelType">
+                                <option value="euro95">Euro 95 (E10)</option>
+                                <option value="euro98">Euro 98 (E5)</option>
+                                <option value="diesel">Diesel (B7)</option>
+                                <option value="lpg">LPG</option>
+                            </select>
+                        </div>
+
+                        <div class="field">
+                            <label for="price-source">Prijsbron</label>
+                            <select id="price-source" v-model="gasStation">
+                                <option value="average">Belgisch gemiddelde</option>
+                                <option value="custom">Eigen literprijs</option>
+                            </select>
+                        </div>
+
+                        <div class="field" v-if="gasStation === 'custom'">
+                            <label for="custom-price">Prijs <span>€/L</span></label>
+                            <div class="input-shell"><i class="fa-solid fa-euro-sign field-icon" aria-hidden="true"></i><input id="custom-price" type="number" v-model.number="customPrice" min="0.5" max="5" step="0.001" placeholder="1,699" inputmode="decimal" required></div>
+                        </div>
+                    </div>
+
+                    <button type="submit" class="primary-cta" :disabled="isCalculating || !departure || !destination || !consumption">
+                        <span v-if="!isCalculating">Bereken mijn rit <i class="fa-solid fa-arrow-right" aria-hidden="true"></i></span>
+                        <span v-else><i class="fa-solid fa-circle-notch fa-spin" aria-hidden="true"></i> Route berekenen…</span>
+                    </button>
+                </form>
             </div>
-            
-            <!-- Fuel Price Display -->
-            <div v-if="currentFuelPrice" class="mt-4 p-4 bg-blue-50 dark:bg-blue-900/20 rounded-lg">
-                <div class="flex items-center justify-between">
-                    <div class="flex-1">
-                        <div class="flex items-center gap-2">
-                            <span class="text-sm font-medium">
-                                <span v-if="gasStation === 'custom'">Aangepaste brandstofprijs</span>
-                                <span v-else>Officiële gemiddelde brandstofprijs</span>
-                            </span>
-                        </div>
-                        <div class="flex items-center gap-2 mt-1">
-                            <span class="font-bold text-2xl">{{ currentFuelPrice.toFixed(3) }}</span>
-                            <span class="text-gray-600 dark:text-gray-400">EUR/L</span>
-                        </div>
+
+            <div class="journey-pane">
+                <div class="map-toolbar">
+                    <div class="live-price" v-if="currentFuelPrice">
+                        <span class="status-dot" aria-hidden="true"></span>
+                        <div><small>{{ gasStation === 'custom' ? 'Eigen prijs' : getFuelTypeName(fuelType) + ' · België' }}</small><strong>€ {{ currentFuelPrice.toFixed(3) }}<span>/L</span></strong></div>
                     </div>
-                    <button
-                        @click="refreshFuelPrice"
-                        :disabled="isRefreshingPrice"
-                        class="px-3 py-1.5 bg-blue-500 hover:bg-blue-600 disabled:bg-gray-300 dark:disabled:bg-gray-600 text-white text-sm rounded-lg transition-colors flex items-center"
-                        title="Ververs brandstofprijs"
-                    >
-                        <i class="fas fa-sync-alt mr-1.5" :class="{ 'animate-spin': isRefreshingPrice }"></i>
-                        <span v-if="!isRefreshingPrice">Ververs</span>
-                        <span v-else>Laden...</span>
+                    <button type="button" class="refresh-price" @click="refreshFuelPrice" :disabled="isRefreshingPrice" aria-label="Ververs brandstofprijs">
+                        <i class="fa-solid fa-rotate" :class="{ 'fa-spin': isRefreshingPrice }" aria-hidden="true"></i><span>{{ isRefreshingPrice ? 'Ophalen…' : 'Ververs prijs' }}</span>
                     </button>
                 </div>
-                <div class="text-xs text-gray-500 dark:text-gray-400 mt-2">
-                    <i class="fas fa-clock mr-1"></i>
-                    Laatst bijgewerkt: {{ lastPriceUpdate }}
-                </div>
-                <div class="text-xs mt-1 flex items-center">
-                    <i class="fas fa-database mr-1" :class="{
-                        'text-green-500': priceSource.includes('StatBel'),
-                        'text-yellow-500': priceSource.includes('proxy'),
-                        'text-orange-500': priceSource.includes('averages') || priceSource.includes('fallback'),
-                        'text-blue-500': priceSource.includes('Aangepaste'),
-                        'text-gray-500': !priceSource.includes('StatBel') && !priceSource.includes('proxy') && !priceSource.includes('averages') && !priceSource.includes('Aangepaste')
-                    }"></i>
-                    <span class="text-xs" :class="{
-                        'text-green-600 dark:text-green-400': priceSource.includes('StatBel'),
-                        'text-yellow-600 dark:text-yellow-400': priceSource.includes('proxy'),
-                        'text-orange-600 dark:text-orange-400': priceSource.includes('averages') || priceSource.includes('fallback'),
-                        'text-blue-600 dark:text-blue-400': priceSource.includes('Aangepaste'),
-                        'text-gray-500 dark:text-gray-400': !priceSource.includes('StatBel') && !priceSource.includes('proxy') && !priceSource.includes('averages') && !priceSource.includes('Aangepaste')
-                    }">Bron: {{ priceSource }}</span>
-                </div>
-                <div class="text-xs text-gray-500 dark:text-gray-400 mt-1">
-                    <i class="fas fa-info-circle mr-1"></i>
-                    <span v-if="gasStation === 'custom'">Handmatig ingevoerde prijs</span>
-                    <span v-else-if="priceSource.includes('StatBel') && !priceSource.includes('proxy')">Live data van Belgische overheid - Automatisch bijgewerkt elke 6 uur</span>
-                    <span v-else-if="priceSource.includes('proxy')">Via CORS proxy (lokale ontwikkeling) - Automatisch bijgewerkt elke 6 uur</span>
-                    <span v-else>Fallback prijzen - Klik op 'Ververs' om opnieuw te proberen</span>
-                </div>
-            </div>
-            
-            <!-- Calculate Button -->
-            <button 
-                @click="calculateTrip"
-                :disabled="isCalculating || !departure || !destination || !consumption"
-                class="w-full mt-6 py-3 bg-blue-500 hover:bg-blue-600 disabled:bg-gray-300 dark:disabled:bg-gray-600 text-white font-medium rounded-lg transition-colors flex items-center justify-center"
-            >
-                <i class="fas fa-route mr-2" v-if="!isCalculating"></i>
-                <span v-if="!isCalculating">Bereken Route & Kosten</span>
-                <span v-else class="flex items-center">
-                    <svg class="animate-spin h-5 w-5 mr-3" viewBox="0 0 24 24">
-                        <circle class="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" stroke-width="4" fill="none"></circle>
-                        <path class="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"></path>
-                    </svg>
-                    Berekenen...
-                </span>
-            </button>
-        </section>
-        
-        <!-- Result Section -->
-        <section v-if="result" class="bg-white dark:bg-gray-800 rounded-xl shadow-md p-6 mb-8 animate-fade-in">
-            <h2 class="text-xl font-bold mb-4 flex items-center">
-                <i class="fas fa-poll mr-3 text-green-500"></i>
-                Resultaten
-            </h2>
-            
-            <div class="grid md:grid-cols-4 gap-4">
-                <div class="bg-gray-50 dark:bg-gray-700 rounded-lg p-4 text-center">
-                    <i class="fas fa-road text-2xl text-blue-500 mb-2"></i>
-                    <p class="text-sm text-gray-600 dark:text-gray-400">Afstand</p>
-                    <p class="text-2xl font-bold">{{ result.distance }} km</p>
-                </div>
-                
-                <div class="bg-gray-50 dark:bg-gray-700 rounded-lg p-4 text-center">
-                    <i class="fas fa-clock text-2xl text-purple-500 mb-2"></i>
-                    <p class="text-sm text-gray-600 dark:text-gray-400">Reistijd</p>
-                    <p class="text-2xl font-bold">{{ formatDuration(result.duration) }}</p>
-                </div>
-                
-                <div class="bg-gray-50 dark:bg-gray-700 rounded-lg p-4 text-center">
-                    <i class="fas fa-euro-sign text-2xl text-green-500 mb-2"></i>
-                    <p class="text-sm text-gray-600 dark:text-gray-400">Kosten</p>
-                    <p class="text-2xl font-bold">€ {{ result.cost }}</p>
-                </div>
-                
-                <div class="bg-gray-50 dark:bg-gray-700 rounded-lg p-4 text-center">
-                    <i class="fas fa-leaf text-2xl text-green-600 mb-2"></i>
-                    <p class="text-sm text-gray-600 dark:text-gray-400">CO₂ Uitstoot</p>
-                    <p class="text-2xl font-bold">{{ result.co2 }} kg</p>
-                </div>
-            </div>
-            
-            <!-- Map -->
-            <div id="map" class="mt-6 h-96 rounded-lg overflow-hidden"></div>
-        </section>
-        
-        <!-- History Section -->
-        <section id="history" class="bg-white dark:bg-gray-800 rounded-xl shadow-md p-6 mb-8">
-            <div class="flex justify-between items-center mb-4">
-                <h2 class="text-xl font-bold flex items-center">
-                    <i class="fas fa-history mr-3 text-orange-500"></i>
-                    Geschiedenis
-                </h2>
-                <button 
-                    v-if="history.length > 0"
-                    @click="exportHistory"
-                    class="px-4 py-2 bg-gray-100 dark:bg-gray-700 hover:bg-gray-200 dark:hover:bg-gray-600 rounded-lg text-sm transition-colors"
-                >
-                    <i class="fas fa-download mr-2"></i>
-                    Exporteer CSV
-                </button>
-            </div>
-            
-            <div v-if="history.length === 0" class="text-center py-8 text-gray-500 dark:text-gray-400">
-                <i class="fas fa-inbox text-4xl mb-3"></i>
-                <p>Nog geen ritten berekend</p>
-            </div>
-            
-            <div v-else class="space-y-3">
-                <div v-for="(trip, index) in reversedHistory" 
-                     :key="index"
-                     class="bg-gray-50 dark:bg-gray-700 rounded-lg p-4 hover:shadow-md transition-shadow">
-                    <div class="flex justify-between items-start">
-                        <div class="flex-1">
-                            <div class="font-medium mb-1">
-                                <i class="fas fa-map-marker-alt text-blue-500 mr-1"></i>
-                                {{ trip.departure }} → {{ trip.destination }}
-                            </div>
-                            <div class="text-sm text-gray-600 dark:text-gray-400 space-x-4">
-                                <span><i class="fas fa-road mr-1"></i>{{ trip.distance }} km</span>
-                                <span><i class="fas fa-euro-sign mr-1"></i>{{ trip.cost }}</span>
-                                <span><i class="fas fa-gas-pump mr-1"></i>{{ getFuelTypeName(trip.fuelType) }}</span>
-                                <span v-if="trip.gasStation"><i class="fas fa-building mr-1"></i>{{ getStationName(trip.gasStation) }}</span>
-                                <span><i class="fas fa-calendar mr-1"></i>{{ formatDate(trip.date) }}</span>
-                            </div>
-                        </div>
-                        <button 
-                            @click="deleteTrip(index)"
-                            class="ml-4 text-red-500 hover:text-red-700 transition-colors"
-                        >
-                            <i class="fas fa-trash"></i>
-                        </button>
+
+                <div class="map-stage">
+                    <div id="map" role="region" aria-label="Kaart met geplande route"></div>
+                    <div class="map-empty" v-if="!result">
+                        <span class="map-empty-icon"><i class="fa-solid fa-route" aria-hidden="true"></i></span>
+                        <strong>Je route verschijnt hier</strong>
+                        <small>Vul je vertrek en bestemming in om te starten.</small>
                     </div>
+                </div>
+
+                <div class="result-panel" v-if="result" aria-live="polite">
+                    <div class="result-cost">
+                        <p>{{ roundTrip ? 'Totale kosten heen & terug' : 'Geschatte ritprijs' }}</p>
+                        <strong><span>€</span>{{ result.cost }}</strong>
+                        <small>op basis van € {{ result.fuelPrice }}/L</small>
+                    </div>
+                    <div class="result-metrics">
+                        <div><i class="fa-solid fa-road" aria-hidden="true"></i><span>Afstand<strong>{{ result.distance }} km</strong></span></div>
+                        <div><i class="fa-regular fa-clock" aria-hidden="true"></i><span>Reistijd<strong>{{ formatDuration(result.duration) }}</strong></span></div>
+                        <div><i class="fa-solid fa-gas-pump" aria-hidden="true"></i><span>Brandstof<strong>{{ result.fuelNeeded }} L</strong></span></div>
+                        <div><i class="fa-solid fa-leaf" aria-hidden="true"></i><span>CO₂<strong>{{ result.co2 }} kg</strong></span></div>
+                    </div>
+                    <div class="split-cost" v-if="passengers > 1"><i class="fa-solid fa-user-group" aria-hidden="true"></i><span>Per persoon bij {{ passengers }} reizigers</span><strong>€ {{ result.costPerPerson }}</strong></div>
+                    <div class="result-actions">
+                        <button type="button" class="secondary-button" @click="saveCurrentAsFavorite"><i class="fa-regular fa-star" aria-hidden="true"></i> Bewaar route</button>
+                        <a href="#history" class="text-button">Bekijk ritlogboek <i class="fa-solid fa-arrow-down" aria-hidden="true"></i></a>
+                    </div>
+                </div>
+
+                <div class="price-meta">
+                    <span><i class="fa-solid fa-shield-halved" aria-hidden="true"></i>{{ priceSource }}</span>
+                    <span>Bijgewerkt {{ lastPriceUpdate }}</span>
                 </div>
             </div>
         </section>
-        
-        <!-- Chart Section -->
-        <section id="chart" class="bg-white dark:bg-gray-800 rounded-xl shadow-md p-6">
-            <h2 class="text-xl font-bold mb-4 flex items-center">
-                <i class="fas fa-chart-line mr-3 text-purple-500"></i>
-                Statistieken
-            </h2>
-            
-            <div v-if="history.length === 0" class="text-center py-8 text-gray-500 dark:text-gray-400">
-                <i class="fas fa-chart-area text-4xl mb-3"></i>
-                <p>Nog geen data beschikbaar</p>
+
+        <section id="favorites" class="favorites-strip" v-if="(favorites || []).length" aria-labelledby="favorites-title">
+            <div><p class="step-label">Snel opnieuw</p><h2 id="favorites-title">Bewaarde routes</h2></div>
+            <div class="favorite-list">
+                <article class="favorite-route" v-for="fav in (favorites || [])" :key="fav.id">
+                    <button type="button" class="favorite-main" @click="applyFavorite(fav)">
+                        <i class="fa-solid fa-star" aria-hidden="true"></i><span><strong>{{ fav.name || fav.destination }}</strong><small>{{ fav.departure }} → {{ fav.destination }}</small></span>
+                    </button>
+                    <button type="button" class="delete-button" @click="deleteFavorite(fav.id)" :aria-label="`Verwijder bewaarde route ${fav.name || fav.destination}`"><i class="fa-solid fa-xmark" aria-hidden="true"></i></button>
+                </article>
             </div>
-            
-            <div v-else>
-                <canvas id="costChart" class="mb-6"></canvas>
-                
-                <div class="grid md:grid-cols-3 gap-4 mt-6">
-                    <div class="bg-gray-50 dark:bg-gray-700 rounded-lg p-4 text-center">
-                        <p class="text-sm text-gray-600 dark:text-gray-400">Totale Afstand</p>
-                        <p class="text-2xl font-bold">{{ totalDistance }} km</p>
+        </section>
+
+        <section class="logbook-shell" aria-labelledby="logbook-title">
+            <div class="logbook-header">
+                <div><p class="step-label">Jouw overzicht</p><h2 id="logbook-title">Ritlogboek</h2></div>
+                <nav class="section-tabs" aria-label="Ritlogboek onderdelen">
+                    <a href="#history">Recente ritten</a><a href="#chart">Inzichten</a>
+                </nav>
+            </div>
+
+            <div class="logbook-grid">
+                <section id="history" class="history-panel" aria-labelledby="history-title">
+                    <div class="panel-heading">
+                        <h3 id="history-title">Recente ritten <span>{{ history.length }}</span></h3>
+                        <button v-if="history.length" type="button" @click="exportHistory" class="text-button"><i class="fa-solid fa-download" aria-hidden="true"></i> CSV</button>
                     </div>
-                    <div class="bg-gray-50 dark:bg-gray-700 rounded-lg p-4 text-center">
-                        <p class="text-sm text-gray-600 dark:text-gray-400">Totale Kosten</p>
-                        <p class="text-2xl font-bold">€ {{ totalCost }}</p>
+
+                    <div v-if="history.length === 0" class="empty-state">
+                        <i class="fa-solid fa-road-circle-check" aria-hidden="true"></i><strong>Nog geen ritten</strong><p>Je eerste berekening verschijnt automatisch in dit overzicht.</p><a href="#calculator">Plan je eerste rit</a>
                     </div>
-                    <div class="bg-gray-50 dark:bg-gray-700 rounded-lg p-4 text-center">
-                        <p class="text-sm text-gray-600 dark:text-gray-400">Gemiddelde Kosten/km</p>
-                        <p class="text-2xl font-bold">€ {{ avgCostPerKm }}</p>
+
+                    <ol v-else class="history-list">
+                        <li v-for="(trip, index) in reversedHistory" :key="trip.id || `${trip.date}-${index}`">
+                            <div class="history-date"><strong>{{ formatDate(trip.date) }}</strong><span>{{ trip.roundTrip ? 'Retour' : 'Enkele rit' }}</span></div>
+                            <div class="history-route"><i class="fa-solid fa-route" aria-hidden="true"></i><span><strong>{{ trip.departure }} → {{ trip.destination }}</strong><small>{{ trip.distance }} km · {{ getFuelTypeName(trip.fuelType) }}<template v-if="trip.fuelNeeded"> · {{ trip.fuelNeeded }} L</template></small></span></div>
+                            <strong class="history-cost">€ {{ trip.cost }}</strong>
+                            <button type="button" @click="deleteTrip(index)" class="delete-button" :aria-label="`Verwijder rit van ${trip.departure} naar ${trip.destination}`"><i class="fa-regular fa-trash-can" aria-hidden="true"></i></button>
+                        </li>
+                    </ol>
+
+                    <div class="undo-bar" v-if="deletedTrip" role="status">
+                        <span>Rit verwijderd</span><button type="button" @click="undoDelete">Ongedaan maken</button>
                     </div>
-                </div>
+                </section>
+
+                <section id="chart" class="insights-panel" aria-labelledby="chart-title">
+                    <div class="panel-heading"><h3 id="chart-title">Inzichten</h3><span class="period-label">Alles</span></div>
+                    <div class="insight-totals">
+                        <div><small>Totale kosten</small><strong>€ {{ totalCost }}</strong></div>
+                        <div><small>Afstand</small><strong>{{ totalDistance }} <span>km</span></strong></div>
+                        <div><small>Per kilometer</small><strong>€ {{ avgCostPerKm }}</strong></div>
+                    </div>
+                    <div class="chart-wrap" :class="{ 'is-empty': history.length === 0 }">
+                        <canvas id="costChart" aria-label="Grafiek van kosten per rit" role="img"></canvas>
+                        <div v-if="history.length === 0" class="chart-empty"><i class="fa-solid fa-chart-simple" aria-hidden="true"></i><span>Bereken een rit om trends te zien.</span></div>
+                    </div>
+                </section>
             </div>
         </section>
     </main>
-    
-    <!-- Footer -->
-    <footer class="bg-white dark:bg-gray-800 shadow-lg mt-8">
-        <div class="container mx-auto px-4 py-6">
-            <div class="text-center text-gray-600 dark:text-gray-400">
-                <p>&copy; 2025 FuelTracker. Alle rechten voorbehouden.</p>
-                <p class="text-sm mt-2">
-                    <a href="#" class="hover:text-blue-500 transition-colors">Privacy</a>
-                    <span class="mx-2">•</span>
-                    <a href="#" class="hover:text-blue-500 transition-colors">Voorwaarden</a>
-                    <span class="mx-2">•</span>
-                    <a href="#" class="hover:text-blue-500 transition-colors">Contact</a>
-                </p>
-            </div>
+
+    <footer class="site-footer">
+        <div class="footer-main">
+            <a class="brand footer-brand" href="#calculator"><span class="brand-mark" aria-hidden="true"><i class="fa-solid fa-gas-pump"></i></span><span>Fuel<span>Tracker</span></span></a>
+            <p>Een eenvoudige kostenraming voor elke autorit. Je ritgeschiedenis blijft op dit apparaat.</p>
+            <a href="#calculator" class="footer-cta">Plan een rit <i class="fa-solid fa-arrow-up" aria-hidden="true"></i></a>
         </div>
+        <div class="footer-disclosures" aria-label="Juridische informatie en contact">
+            <a href="privacy.html"><strong>Privacy</strong><span>Hoe route- en lokale gegevens worden verwerkt.</span></a>
+            <a href="voorwaarden.html"><strong>Voorwaarden</strong><span>Lees hoe je onze kostenramingen gebruikt.</span></a>
+            <a href="contact.html"><strong>Contact</strong><span>Meld een probleem of deel een suggestie.</span></a>
+        </div>
+        <div class="footer-bottom"><span>© 2026 FuelTracker</span><span>Gebouwd voor Belgische wegen.</span></div>
     </footer>
-    
-    <!-- Scripts -->
-    <script src="https://unpkg.com/vue@3/dist/vue.global.prod.js"></script>
-    <script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"></script>
-    <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+
+    <script vite-ignore src="vendor/vue.global.prod.js"></script>
+    <script vite-ignore src="vendor/leaflet/leaflet.js"></script>
+    <script vite-ignore src="vendor/chart.umd.js"></script>
     <script type="module" src="js/app.js"></script>
     <script>
-        // Service worker registration with error handling
+        const menuButton = document.getElementById('mobileMenuBtn');
+        menuButton?.addEventListener('click', () => {
+            const expanded = menuButton.getAttribute('aria-expanded') === 'true';
+            menuButton.setAttribute('aria-expanded', String(!expanded));
+            menuButton.setAttribute('aria-label', expanded ? 'Open navigatiemenu' : 'Sluit navigatiemenu');
+        });
+        document.querySelectorAll('#mobileMenu a').forEach(link => link.addEventListener('click', () => {
+            menuButton?.setAttribute('aria-expanded', 'false');
+        }));
         if ('serviceWorker' in navigator) {
-            window.addEventListener('load', () => {
-                navigator.serviceWorker.register('/js/service-worker.js')
-                    .then(reg => console.log('Service Worker registered'))
-                    .catch(err => console.warn('Service Worker registration failed:', err));
-            });
+            window.addEventListener('load', () => navigator.serviceWorker.register('service-worker.js').catch(error => console.warn('Service worker niet beschikbaar:', error)));
         }
     </script>
 </body>

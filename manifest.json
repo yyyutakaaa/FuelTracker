@@ -1,26 +1,37 @@
 {
-    "name": "FuelTracker - Brandstofkosten Calculator",
+    "id": "./",
+    "name": "FuelTracker – Brandstofkosten",
     "short_name": "FuelTracker",
-    "description": "Bereken brandstofkosten voor uw reis met actuele prijzen en routeplanning",
-    "start_url": "/",
+    "description": "Schat afstand, brandstofverbruik en ritkosten voor een autoroute.",
+    "start_url": "./",
+    "scope": "./",
     "display": "standalone",
-    "background_color": "#ffffff",
-    "theme_color": "#3b82f6",
-    "orientation": "portrait-primary",
+    "background_color": "#f8fafc",
+    "theme_color": "#2563eb",
     "icons": [
         {
-            "src": "/icon-192.png",
-            "sizes": "192x192",
-            "type": "image/png"
+            "src": "./icon.svg",
+            "sizes": "any",
+            "type": "image/svg+xml",
+            "purpose": "any maskable"
+        }
+    ],
+    "shortcuts": [
+        {
+            "name": "Nieuwe rit berekenen",
+            "short_name": "Nieuwe rit",
+            "url": "./#calculator",
+            "icons": [{ "src": "./icon.svg", "sizes": "any", "type": "image/svg+xml" }]
         },
         {
-            "src": "/icon-512.png",
-            "sizes": "512x512",
-            "type": "image/png"
+            "name": "Ritgeschiedenis bekijken",
+            "short_name": "Geschiedenis",
+            "url": "./#history",
+            "icons": [{ "src": "./icon.svg", "sizes": "any", "type": "image/svg+xml" }]
         }
     ],
     "categories": ["utilities", "navigation", "finance"],
-    "lang": "nl",
+    "lang": "nl-BE",
     "dir": "ltr",
     "prefer_related_applications": false
 }

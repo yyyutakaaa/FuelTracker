@@ -1,149 +1,104 @@
-# FuelTracker - Brandstofkosten Calculator
+# FuelTracker
 
-Een moderne Progressive Web App (PWA) voor het berekenen van brandstofkosten voor reizen in België en Nederland. Met real-time adressuggesties, actuele brandstofprijzen en uitgebreide routeplanning.
+FuelTracker is een Nederlandstalige webapp die voor een autoroute de afstand, geschatte reistijd, benodigde brandstof, kosten en CO₂-uitstoot berekent. De app is gericht op België en Nederland en bewaart ritgeschiedenis lokaal in de browser.
 
-![FuelTracker](https://img.shields.io/badge/version-1.0.0-blue)
-![License](https://img.shields.io/badge/license-MIT-green)
-![PWA](https://img.shields.io/badge/PWA-ready-orange)
+## Functionaliteit
 
-## ✨ Kenmerken
+- adressuggesties via OpenStreetMap Nominatim;
+- autoroutes via Project OSRM;
+- routevisualisatie met Leaflet en OpenStreetMap-kaarttegels;
+- kostenraming op basis van verbruik en brandstofprijs;
+- brandstofspecifieke CO₂-raming;
+- lokale ritgeschiedenis, statistiek en CSV-export;
+- responsive lichte en donkere weergave;
+- installeerbare PWA met een offline app-shell.
 
-### 🚗 Core Functionaliteit
-- **Real-time Adres Autocomplete**: Vind adressen terwijl u typt met OpenStreetMap Nominatim
-- **Actuele Brandstofprijzen**: Meerdere databronnen met 24-uurs caching
-- **Routeplanning & Visualisatie**: Interactieve kaart met Leaflet
-- **Kostenberekening**: Nauwkeurige berekening op basis van afstand, verbruik en brandstoftype
-- **CO₂ Uitstoot Tracking**: Bereken de milieu-impact van uw reis
+Een routeberekening is een **raming**. Werkelijke afstand, prijs, uitstoot en reistijd kunnen afwijken. Adreszoeken, nieuwe routes, kaarttegels en actuele prijsinformatie vereisen een internetverbinding; de app claimt daarom geen volledige offline routeplanning.
 
-### 📊 Data & Analytics
-- **Ritgeschiedenis**: Bewaar al uw berekeningen lokaal
-- **Statistieken Dashboard**: Visualiseer kosten en afstanden met Chart.js
-- **CSV Export**: Exporteer uw geschiedenis voor verdere analyse
-- **Favoriete Routes**: Sla veelgebruikte routes op
+## Lokaal ontwikkelen
 
-### 🎨 UI/UX
-- **Dark/Light Mode**: Automatisch of handmatig wisselen
-- **Responsive Design**: Werkt perfect op desktop, tablet en mobiel
-- **Offline Support**: Werkt zonder internetverbinding na eerste gebruik
-- **Nederlandse Interface**: Volledig gelokaliseerd
+Vereist: Node.js 20.19 of nieuwer.
 
-## 🚀 Installatie
-
-### Online Gebruik
-Bezoek de applicatie direct via uw browser. De app werkt als PWA en kan geïnstalleerd worden.
-
-### Lokale Installatie
-
-1. Clone de repository:
 ```bash
-git clone https://github.com/yourusername/FuelTracker.git
+git clone https://github.com/yyyutakaaa/FuelTracker.git
 cd FuelTracker
+npm install
+npm run dev
 ```
 
-2. Start een lokale webserver:
+Vite toont het lokale adres in de terminal. Gebruik de Vite-server in plaats van het HTML-bestand rechtstreeks te openen, omdat modules en de serviceworker een HTTP-context nodig hebben.
+
+## Testen en bouwen
+
 ```bash
-# Met Python
-python -m http.server 8000
-
-# Of met Node.js
-npx http-server -p 8000
-
-# Of met PHP
-php -S localhost:8000
+npm test
+npm run build
+npm run preview
 ```
 
-3. Open in browser:
+`npm run build` maakt lokale vendorassets, compileert Tailwind, bouwt alle HTML-pagina's en kopieert de vastgepinde browserlibraries naar `dist/vendor`. Alleen de inhoud van `dist/` hoeft gedeployed te worden. De ontwikkelserver maakt dezelfde tijdelijke `vendor/`-map, zodat development en productie dezelfde library-URL's gebruiken.
+
+De Vite-configuratie gebruikt `base: './'`. Daardoor werkt dezelfde build op een domeinroot én onder een subpad, bijvoorbeeld GitHub Pages op `/FuelTracker/`. Registreer `service-worker.js` relatief aan de huidige pagina. De worker staat bewust op de root van de app, zodat zijn standaardscope de volledige app omvat.
+
+## Productie-afhankelijkheden
+
+Versies zijn exact vastgezet in `package.json` en `package-lock.json`:
+
+- Vue 3;
+- Leaflet;
+- Chart.js;
+- Font Awesome;
+- Tailwind CSS;
+- Vite.
+
+De productiebuild gebruikt lokale bestanden uit `dist/vendor` en de gecompileerde `css/tailwind.generated.css`. Zo is de interface niet afhankelijk van een CDN of runtime Tailwind-compiler.
+
+## PWA en offline gedrag
+
+Het webmanifest, icoon en de serviceworker gebruiken scope-relatieve URL's. De serviceworker bewaart de app-shell en lokaal gehoste statische assets. Navigaties gebruiken netwerk-eerst met een offlinepagina als veilige fallback. Externe API-responses en kaarttegels worden niet als stilzwijgend actuele data opgeslagen.
+
+Voor een installeerbare PWA is in productie HTTPS nodig. `localhost` is tijdens ontwikkeling een toegestane uitzondering.
+
+## Privacy
+
+Ritgeschiedenis en voorkeuren staan in de lokale browseropslag en worden niet naar een eigen FuelTracker-server gesynchroniseerd. Een routezoekopdracht maakt wel rechtstreeks verbinding met externe aanbieders. Zoektekst, coördinaten en technische verbindingsgegevens kunnen daardoor door Nominatim, OSRM, OpenStreetMap en de gebruikte prijsbron worden verwerkt. Zie [privacy.html](privacy.html) voor de uitleg aan gebruikers.
+
+## Projectstructuur
+
+```text
+.
+├── index.html                 hoofdapp
+├── privacy.html               privacy-informatie
+├── voorwaarden.html           gebruiksvoorwaarden
+├── contact.html               contactroute
+├── offline.html               offline fallback
+├── css/                       Tailwind-input, gegenereerde CSS en appstijlen
+├── js/                        applicatielogica en serviceworker
+├── test/                      automatische contracttests
+├── manifest.json              PWA-manifest
+├── vite.config.js             multipage-build en vendorassets
+└── package.json               scripts en vastgepinde dependencies
 ```
-http://localhost:8000
-```
 
-## 📱 PWA Installatie
+`vendor/`, `css/tailwind.generated.css` en `dist/` zijn buildoutput en hoeven niet handmatig te worden aangepast.
 
-### Desktop (Chrome/Edge)
-1. Bezoek de applicatie
-2. Klik op het installatie-icoon in de adresbalk
-3. Volg de installatie-instructies
+## Externe diensten
 
-### Mobiel (Android)
-1. Open de app in Chrome
-2. Tap op "Toevoegen aan startscherm"
-3. De app verschijnt als native app
+- [OpenStreetMap Nominatim](https://nominatim.org/) voor adressuggesties en geocoding;
+- [Project OSRM](https://project-osrm.org/) voor routeberekeningen;
+- [OpenStreetMap](https://www.openstreetmap.org/) voor kaarttegels;
+- [Statbel](https://statbel.fgov.be/) als bron voor Belgische prijsdata, met een fallback wanneer die bron niet bereikbaar is.
 
-### iOS
-1. Open in Safari
-2. Tap het "Deel" icoon
-3. Kies "Zet op beginscherm"
+Respecteer bij wijzigingen de gebruiksvoorwaarden en limieten van deze diensten. Een publieke app met veel verkeer hoort geocoding, routing en prijsdata via een beheerde backend/proxy met caching en rate limiting aan te bieden.
 
-## 🛠️ Technologieën
+## Bijdragen
 
-- **Frontend Framework**: Vue.js 3
-- **Styling**: Tailwind CSS
-- **Kaarten**: Leaflet met OpenStreetMap
-- **Grafieken**: Chart.js
-- **Icons**: Font Awesome
-- **PWA**: Service Worker met offline caching
+1. Maak een branch.
+2. Voer `npm test` en `npm run build` uit.
+3. Open een pull request met een korte beschrijving en screenshots bij visuele wijzigingen.
 
-## 📋 Gebruik
+Problemen en ideeën kunnen worden gemeld via [GitHub Issues](https://github.com/yyyutakaaa/FuelTracker/issues).
 
-### Basis Berekening
-1. Voer uw vertrekpunt in (autocomplete helpt)
-2. Voer uw bestemming in
-3. Vul uw brandstofverbruik in (L/100km)
-4. Selecteer brandstoftype
-5. Klik "Bereken Route & Kosten"
+## Licentie
 
-### Geavanceerde Features
-- **Geschiedenis**: Bekijk al uw eerdere berekeningen
-- **Statistieken**: Analyseer uw brandstofuitgaven over tijd
-- **Export**: Download uw data als CSV
-- **Dark Mode**: Toggle via het maan/zon icoon
-
-## 🔧 Configuratie
-
-### Brandstofprijzen
-De app haalt prijzen van meerdere bronnen:
-1. Belgische StatBel API (primair)
-2. Alternatieve bronnen (secundair)
-3. Fallback prijzen (laatste optie)
-
-### API Endpoints
-- **Geocoding**: OpenStreetMap Nominatim
-- **Routing**: OSRM Project
-- **Fuel Prices**: StatBel België
-
-## 🤝 Bijdragen
-
-Bijdragen zijn welkom! 
-
-1. Fork het project
-2. Maak een feature branch (`git checkout -b feature/AmazingFeature`)
-3. Commit uw wijzigingen (`git commit -m 'Add AmazingFeature'`)
-4. Push naar de branch (`git push origin feature/AmazingFeature`)
-5. Open een Pull Request
-
-## 📝 Licentie
-
-Dit project is gelicenseerd onder de MIT License - zie het [LICENSE](LICENSE) bestand voor details.
-
-## 🐛 Bekende Problemen
-
-- CORS beperkingen voor sommige brandstofprijs APIs
-- Service Worker vereist HTTPS in productie
-- iOS Safari heeft beperkingen voor PWA functionaliteit
-
-## 📞 Contact
-
-Voor vragen of suggesties:
-- Open een issue op GitHub
-- Email: [your-email@example.com]
-
-## 🙏 Credits
-
-- OpenStreetMap voor geocoding en kaartdata
-- OSRM Project voor routing
-- StatBel voor brandstofprijzen
-- Alle open source libraries gebruikt in dit project
-
----
-
-**Gemaakt met ❤️ voor Belgische en Nederlandse automobilisten**
+FuelTracker is beschikbaar onder de [MIT-licentie](LICENSE).
