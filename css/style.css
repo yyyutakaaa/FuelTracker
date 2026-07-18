@@ -162,14 +162,14 @@ select { appearance: none; padding-right: 2.7rem; background-image: linear-gradi
 .swap-button { position: absolute; z-index: 4; right: .7rem; top: 5.25rem; display: grid; place-items: center; width: 2rem; height: 2rem; border: 1px solid var(--line); border-radius: 50%; background: var(--surface); color: var(--muted); cursor: pointer; transform: rotate(90deg); }
 .swap-button:hover { color: var(--coral); border-color: var(--coral); }
 
-.autocomplete-dropdown { position: absolute; z-index: 40; top: calc(100% + .35rem); width: 100%; max-height: 18rem; overflow-y: auto; border: 1px solid var(--line); border-radius: var(--radius-sm); background: var(--surface); box-shadow: var(--shadow-lg); }
+.autocomplete-dropdown { position: absolute; z-index: 40; top: calc(100% + .35rem); width: 100%; max-height: min(18rem, 42dvh); overflow-x: hidden; overflow-y: auto; border: 1px solid var(--line); border-radius: var(--radius-sm); background: var(--surface); box-shadow: var(--shadow-lg); }
 .autocomplete-item { display: flex; align-items: flex-start; gap: .7rem; width: 100%; padding: .8rem 1rem; border: 0; border-bottom: 1px solid var(--line); background: transparent; color: var(--ink); text-align: left; cursor: pointer; }
 .autocomplete-item:last-child { border-bottom: 0; }
 .autocomplete-item:hover, .autocomplete-item:focus { background: var(--surface-soft); }
 .autocomplete-item i { flex: 0 0 1rem; margin-top: .18rem; color: var(--coral); text-align: center; }
-.suggestion-copy { display: grid; min-width: 0; gap: .16rem; }
+.suggestion-copy { display: grid; flex: 1; min-width: 0; gap: .16rem; }
 .suggestion-copy strong { overflow: hidden; font-size: .82rem; text-overflow: ellipsis; white-space: nowrap; }
-.suggestion-copy small { overflow: hidden; color: var(--muted); font-size: .7rem; line-height: 1.35; text-overflow: ellipsis; white-space: nowrap; }
+.suggestion-copy small { display: -webkit-box; overflow: hidden; color: var(--muted); font-size: .7rem; line-height: 1.35; overflow-wrap: anywhere; -webkit-box-orient: vertical; -webkit-line-clamp: 2; }
 .autocomplete-status { display: flex; align-items: center; gap: .55rem; padding: .9rem 1rem; color: var(--muted); font-size: .75rem; line-height: 1.4; }
 .autocomplete-status.is-error { color: var(--danger); }
 

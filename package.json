@@ -3,7 +3,7 @@
   "version": "2.0.0",
   "private": true,
   "type": "module",
-  "description": "Route- en brandstofkostencalculator voor België en Nederland.",
+  "description": "Brandstofkostenraming voor adressen in België/Nederland en steden in Europa.",
   "scripts": {
     "dev": "npm run prepare:vendor && npm run build:css && vite",
     "prepare:vendor": "node ./scripts/prepare-vendor.js",

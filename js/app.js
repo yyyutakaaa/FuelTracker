@@ -1,7 +1,12 @@
 // FuelTracker application
 
 import { CO2_FACTORS_KG_PER_LITRE, calculateTripMetrics } from './calculations.js';
-import { formatGeocodingSuggestions } from './geocoding.js';
+import {
+    EUROPE_COUNTRY_CODES_QUERY,
+    filterAllowedGeocodingResults,
+    findFirstAllowedGeocodingResult,
+    formatGeocodingSuggestions
+} from './geocoding.js';
 
 const { createApp } = Vue;
 
@@ -727,7 +732,7 @@ createApp({
             const activeRequestId = requestId ?? ++this[idKey];
 
             try {
-                const url = `https://nominatim.openstreetmap.org/search?format=json&q=${encodeURIComponent(query)}&countrycodes=be,nl&limit=8&addressdetails=1&accept-language=nl-BE,nl`;
+                const url = `https://nominatim.openstreetmap.org/search?format=jsonv2&q=${encodeURIComponent(query)}&countrycodes=${EUROPE_COUNTRY_CODES_QUERY}&limit=18&addressdetails=1&namedetails=1&accept-language=nl-BE,nl,en`;
                 const response = await fetchWithTimeout(url, {
                     signal: controller.signal,
                     headers: {
@@ -743,7 +748,7 @@ createApp({
                     return;
                 }
 
-                const suggestions = formatGeocodingSuggestions(data, 6);
+                const suggestions = formatGeocodingSuggestions(filterAllowedGeocodingResults(data), 6);
 
                 this[suggestionsKey] = suggestions;
                 this[statusKey] = suggestions.length ? 'ready' : 'empty';
@@ -904,7 +909,7 @@ createApp({
         },
         
         async geocodeAddress(address) {
-            const url = `https://nominatim.openstreetmap.org/search?format=json&q=${encodeURIComponent(address)}&countrycodes=be,nl&limit=1`;
+            const url = `https://nominatim.openstreetmap.org/search?format=jsonv2&q=${encodeURIComponent(address)}&countrycodes=${EUROPE_COUNTRY_CODES_QUERY}&limit=12&addressdetails=1&namedetails=1&accept-language=nl-BE,nl,en`;
             const response = await fetchWithTimeout(url, {
                 headers: {
                     'Accept': 'application/json',
@@ -914,9 +919,10 @@ createApp({
             if (!response.ok) throw new Error(`Adresdienst gaf HTTP ${response.status}`);
             const data = await response.json();
             
-            if (Array.isArray(data) && data.length > 0) {
-                const lat = parseFloat(data[0].lat);
-                const lon = parseFloat(data[0].lon);
+            const result = findFirstAllowedGeocodingResult(data);
+            if (result) {
+                const lat = parseFloat(result.lat);
+                const lon = parseFloat(result.lon);
                 if (!Number.isFinite(lat) || !Number.isFinite(lon)) return null;
                 return {
                     lat,

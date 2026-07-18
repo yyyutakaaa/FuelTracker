@@ -1,10 +1,10 @@
 # FuelTracker
 
-FuelTracker is een Nederlandstalige webapp die voor een autoroute de afstand, geschatte reistijd, benodigde brandstof, kosten en CO₂-uitstoot berekent. De app is gericht op België en Nederland en bewaart ritgeschiedenis lokaal in de browser.
+FuelTracker is een Nederlandstalige webapp die voor een autorit de afstand, geschatte reistijd, benodigde brandstof, kosten en CO₂-uitstoot raamt. Je kunt volledige adressen en locaties in België en Nederland gebruiken, of een stad elders in Europa kiezen. Ritgeschiedenis blijft lokaal in de browser.
 
 ## Functionaliteit
 
-- adressuggesties via OpenStreetMap Nominatim;
+- locatiesuggesties voor adressen en POI's in België/Nederland en steden in Europa;
 - autoroutes via Project OSRM;
 - routevisualisatie met Leaflet en OpenStreetMap-kaarttegels;
 - kostenraming op basis van verbruik en brandstofprijs;
@@ -14,6 +14,8 @@ FuelTracker is een Nederlandstalige webapp die voor een autoroute de afstand, ge
 - installeerbare PWA met een offline app-shell.
 
 Een routeberekening is een **raming**. Werkelijke afstand, prijs, uitstoot en reistijd kunnen afwijken. Adreszoeken, nieuwe routes, kaarttegels en actuele prijsinformatie vereisen een internetverbinding; de app claimt daarom geen volledige offline routeplanning.
+
+De zoekprecisie is bewust begrensd: buiten België en Nederland accepteert FuelTracker alleen steden, geen buitenlandse straten, huisnummers of POI's. Een benoemde locatie in België of Nederland, zoals een pretpark, winkel of restaurant, verschijnt met de locatienaam als hoofdregel en het adres als context.
 
 ## Lokaal ontwikkelen
 
