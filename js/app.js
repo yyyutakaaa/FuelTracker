@@ -1,6 +1,7 @@
 // FuelTracker application
 
 import { CO2_FACTORS_KG_PER_LITRE, calculateTripMetrics } from './calculations.js';
+import { formatGeocodingSuggestions } from './geocoding.js';
 
 const { createApp } = Vue;
 
@@ -443,6 +444,8 @@ createApp({
             // Autocomplete
             departureSuggestions: [],
             destinationSuggestions: [],
+            departureSearchStatus: 'idle',
+            destinationSearchStatus: 'idle',
             departureFocused: false,
             destinationFocused: false,
             departureCoords: null,
@@ -683,8 +686,10 @@ createApp({
             const query = this.departure.trim();
             if (query.length < 3) {
                 this.departureSuggestions = [];
+                this.departureSearchStatus = 'idle';
                 return;
             }
+            this.departureSearchStatus = 'loading';
             const requestId = ++this.departureRequestId;
             this.departureTimer = setTimeout(() => {
                 this.fetchSuggestions(query, 'departure', requestId);
@@ -699,8 +704,10 @@ createApp({
             const query = this.destination.trim();
             if (query.length < 3) {
                 this.destinationSuggestions = [];
+                this.destinationSearchStatus = 'idle';
                 return;
             }
+            this.destinationSearchStatus = 'loading';
             const requestId = ++this.destinationRequestId;
             this.destinationTimer = setTimeout(() => {
                 this.fetchSuggestions(query, 'destination', requestId);
@@ -712,6 +719,7 @@ createApp({
             const controllerKey = type === 'departure' ? 'departureAbortController' : 'destinationAbortController';
             const inputKey = type === 'departure' ? 'departure' : 'destination';
             const suggestionsKey = type === 'departure' ? 'departureSuggestions' : 'destinationSuggestions';
+            const statusKey = type === 'departure' ? 'departureSearchStatus' : 'destinationSearchStatus';
 
             this[controllerKey]?.abort();
             const controller = new AbortController();
@@ -719,7 +727,7 @@ createApp({
             const activeRequestId = requestId ?? ++this[idKey];
 
             try {
-                const url = `https://nominatim.openstreetmap.org/search?format=json&q=${encodeURIComponent(query)}&countrycodes=be,nl&limit=5&addressdetails=1`;
+                const url = `https://nominatim.openstreetmap.org/search?format=json&q=${encodeURIComponent(query)}&countrycodes=be,nl&limit=8&addressdetails=1&accept-language=nl-BE,nl`;
                 const response = await fetchWithTimeout(url, {
                     signal: controller.signal,
                     headers: {
@@ -735,54 +743,17 @@ createApp({
                     return;
                 }
 
-                const suggestions = data.filter(item => item && item.lat && item.lon && item.display_name).map(item => {
-                    const displayName = String(item.display_name);
-                    // Format the address for display
-                    let formattedAddress = '';
-
-                    // Check if this is a named location (POI, building, etc.)
-                    const hasSpecificName = item.name && item.type !== 'road' && item.type !== 'residential';
-
-                    if (hasSpecificName) {
-                        // Use the name for POIs (e.g., "Brussels Airport", "Grand Place")
-                        formattedAddress = item.name;
-                    } else if (item.address) {
-                        // Build address from components: street + house_number + city
-                        const parts = [];
-
-                        // Add street (road, street, or other street types)
-                        const street = item.address.road || item.address.street || item.address.pedestrian || item.address.footway;
-                        if (street) parts.push(street);
-
-                        // Add house number
-                        if (item.address.house_number) parts.push(item.address.house_number);
-
-                        // Add city (try different fields)
-                        const city = item.address.city || item.address.town || item.address.village || item.address.municipality;
-                        if (city) {
-                            formattedAddress = parts.join(' ') + (parts.length > 0 ? ', ' : '') + city;
-                        } else {
-                            formattedAddress = parts.join(' ') || displayName.split(',')[0];
-                        }
-                    } else {
-                        // Fallback to first part of display_name
-                        formattedAddress = displayName.split(',')[0];
-                    }
-
-                    return {
-                        name: item.name || displayName.split(',')[0],
-                        display_name: displayName,
-                        formatted_address: formattedAddress,
-                        lat: parseFloat(item.lat),
-                        lon: parseFloat(item.lon)
-                    };
-                });
+                const suggestions = formatGeocodingSuggestions(data, 6);
 
                 this[suggestionsKey] = suggestions;
+                this[statusKey] = suggestions.length ? 'ready' : 'empty';
             } catch (error) {
                 if (error.name === 'AbortError') return;
                 console.error('Error fetching suggestions:', error);
-                if (activeRequestId === this[idKey]) this[suggestionsKey] = [];
+                if (activeRequestId === this[idKey]) {
+                    this[suggestionsKey] = [];
+                    this[statusKey] = 'error';
+                }
             } finally {
                 if (this[controllerKey] === controller) this[controllerKey] = null;
             }
@@ -794,6 +765,7 @@ createApp({
             this.departure = suggestion.formatted_address;
             this.departureCoords = { lat: suggestion.lat, lon: suggestion.lon };
             this.departureSuggestions = [];
+            this.departureSearchStatus = 'idle';
         },
 
         selectDestination(suggestion) {
@@ -802,6 +774,7 @@ createApp({
             this.destination = suggestion.formatted_address;
             this.destinationCoords = { lat: suggestion.lat, lon: suggestion.lon };
             this.destinationSuggestions = [];
+            this.destinationSearchStatus = 'idle';
         },
         
         handleDepartureBlur() {

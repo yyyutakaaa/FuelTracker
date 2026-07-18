@@ -83,18 +83,21 @@
                 <form class="route-form" @submit.prevent="calculateTrip">
                     <fieldset class="route-fields">
                         <legend class="sr-only">Route</legend>
-                        <div class="route-line" aria-hidden="true"><span></span><i></i><span></span></div>
+                        <div class="route-line" aria-hidden="true"></div>
 
                         <div class="field address-field">
                             <label for="departure">Van</label>
                             <div class="input-shell">
                                 <i class="fa-regular fa-circle-dot field-icon" aria-hidden="true"></i>
-                                <input id="departure" type="text" v-model="departure" @input="searchDeparture" @focus="departureFocused = true" @blur="handleDepartureBlur" placeholder="Vertrekadres" autocomplete="street-address" aria-autocomplete="list" :aria-expanded="departureSuggestions.length > 0 &amp;&amp; departureFocused ? 'true' : 'false'" aria-controls="departure-suggestions" required>
+                                <input id="departure" type="text" v-model="departure" @input="searchDeparture" @focus="departureFocused = true" @blur="handleDepartureBlur" placeholder="Vertrekadres" autocomplete="street-address" aria-autocomplete="list" :aria-expanded="departureFocused &amp;&amp; departureSearchStatus !== 'idle' ? 'true' : 'false'" aria-controls="departure-suggestions" required>
                             </div>
-                            <div id="departure-suggestions" v-if="departureSuggestions.length > 0 &amp;&amp; departureFocused" class="autocomplete-dropdown" role="listbox" aria-label="Suggesties voor vertrekpunt">
-                                <button type="button" v-for="(suggestion, index) in departureSuggestions" :key="index" @mousedown.prevent="selectDeparture(suggestion)" @keydown.enter.prevent="selectDeparture(suggestion)" class="autocomplete-item" role="option">
-                                    <i class="fa-solid fa-location-dot" aria-hidden="true"></i><span>{{ suggestion.formatted_address }}</span>
+                            <div id="departure-suggestions" v-if="departureFocused &amp;&amp; departure.length &gt;= 3 &amp;&amp; departureSearchStatus !== 'idle'" class="autocomplete-dropdown" role="listbox" aria-label="Suggesties voor vertrekpunt">
+                                <button type="button" v-for="suggestion in departureSuggestions" :key="suggestion.id" @mousedown.prevent="selectDeparture(suggestion)" @keydown.enter.prevent="selectDeparture(suggestion)" class="autocomplete-item" role="option" :aria-label="suggestion.formatted_address">
+                                    <i class="fa-solid fa-location-dot" aria-hidden="true"></i><span class="suggestion-copy"><strong>{{ suggestion.primary }}</strong><small v-if="suggestion.secondary">{{ suggestion.secondary }}</small></span>
                                 </button>
+                                <div v-if="departureSearchStatus === 'loading'" class="autocomplete-status"><i class="fa-solid fa-circle-notch fa-spin" aria-hidden="true"></i> Adressen zoeken…</div>
+                                <div v-else-if="departureSearchStatus === 'empty'" class="autocomplete-status">Geen adressen gevonden. Probeer een straat, gemeente of postcode.</div>
+                                <div v-else-if="departureSearchStatus === 'error'" class="autocomplete-status is-error">De adresdienst is tijdelijk niet bereikbaar.</div>
                             </div>
                         </div>
 
@@ -106,12 +109,15 @@
                             <label for="destination">Naar</label>
                             <div class="input-shell">
                                 <i class="fa-solid fa-location-dot field-icon destination-dot" aria-hidden="true"></i>
-                                <input id="destination" type="text" v-model="destination" @input="searchDestination" @focus="destinationFocused = true" @blur="handleDestinationBlur" placeholder="Bestemmingsadres" autocomplete="street-address" aria-autocomplete="list" :aria-expanded="destinationSuggestions.length > 0 &amp;&amp; destinationFocused ? 'true' : 'false'" aria-controls="destination-suggestions" required>
+                                <input id="destination" type="text" v-model="destination" @input="searchDestination" @focus="destinationFocused = true" @blur="handleDestinationBlur" placeholder="Bestemmingsadres" autocomplete="street-address" aria-autocomplete="list" :aria-expanded="destinationFocused &amp;&amp; destinationSearchStatus !== 'idle' ? 'true' : 'false'" aria-controls="destination-suggestions" required>
                             </div>
-                            <div id="destination-suggestions" v-if="destinationSuggestions.length > 0 &amp;&amp; destinationFocused" class="autocomplete-dropdown" role="listbox" aria-label="Suggesties voor bestemming">
-                                <button type="button" v-for="(suggestion, index) in destinationSuggestions" :key="index" @mousedown.prevent="selectDestination(suggestion)" @keydown.enter.prevent="selectDestination(suggestion)" class="autocomplete-item" role="option">
-                                    <i class="fa-solid fa-location-dot" aria-hidden="true"></i><span>{{ suggestion.formatted_address }}</span>
+                            <div id="destination-suggestions" v-if="destinationFocused &amp;&amp; destination.length &gt;= 3 &amp;&amp; destinationSearchStatus !== 'idle'" class="autocomplete-dropdown" role="listbox" aria-label="Suggesties voor bestemming">
+                                <button type="button" v-for="suggestion in destinationSuggestions" :key="suggestion.id" @mousedown.prevent="selectDestination(suggestion)" @keydown.enter.prevent="selectDestination(suggestion)" class="autocomplete-item" role="option" :aria-label="suggestion.formatted_address">
+                                    <i class="fa-solid fa-location-dot" aria-hidden="true"></i><span class="suggestion-copy"><strong>{{ suggestion.primary }}</strong><small v-if="suggestion.secondary">{{ suggestion.secondary }}</small></span>
                                 </button>
+                                <div v-if="destinationSearchStatus === 'loading'" class="autocomplete-status"><i class="fa-solid fa-circle-notch fa-spin" aria-hidden="true"></i> Adressen zoeken…</div>
+                                <div v-else-if="destinationSearchStatus === 'empty'" class="autocomplete-status">Geen adressen gevonden. Probeer een straat, gemeente of postcode.</div>
+                                <div v-else-if="destinationSearchStatus === 'error'" class="autocomplete-status is-error">De adresdienst is tijdelijk niet bereikbaar.</div>
                             </div>
                         </div>
                     </fieldset>
