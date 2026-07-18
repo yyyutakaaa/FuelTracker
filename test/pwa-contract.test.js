@@ -77,6 +77,15 @@ test('production entry uses local assets and a root-scoped serviceworker', async
     assert.doesNotMatch(index, /cdn\.tailwindcss|unpkg\.com|cdn\.jsdelivr\.net|cdnjs\.cloudflare\.com/);
 });
 
+test('app notifications render above Leaflet panes and controls', async () => {
+    const css = await read('css/style.css');
+    const messageRule = css.match(/\.app-message\s*\{([^}]+)\}/)?.[1] || '';
+    const zIndex = Number(messageRule.match(/z-index:\s*(\d+)/)?.[1]);
+
+    // Leaflet controls top out below 1000; keep notifications in the app overlay layer.
+    assert.ok(zIndex >= 2000, `expected app-message z-index >= 2000, received ${zIndex}`);
+});
+
 test('Vite keeps the canonical manifest at app-root in its final HTML', async () => {
     const config = await read('vite.config.js');
     assert.match(config, /index\.replace\(\/\(<link/);
